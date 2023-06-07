@@ -80,6 +80,7 @@ private:
    IUIControl* mUIControl{ nullptr };
    FloatSlider* mFloatSlider{ nullptr };
    PatchCableSource* mControlCable{ nullptr };
+   PatchCableSource* mModCable{ nullptr };
    float mWidth{ 200 };
    float mHeight{ 120 };
    float mSpeed{ 1 };

@@ -54,9 +54,13 @@ void ValueStream::CreateUIControls()
 
    UIBLOCK0();
    FLOATSLIDER(mSpeedSlider, "speed", &mSpeed, .4f, 5);
+
    ENDUIBLOCK0();
    mControlCable = new PatchCableSource(this, kConnectionType_UIControl);
    AddPatchCableSource(mControlCable);
+   mModCable = new PatchCableSource(this, kConnectionType_Modulator);
+   mModCable->SetManualPosition(120, 10);
+   AddPatchCableSource(mModCable);
 }
 
 void ValueStream::Poll()
@@ -73,6 +77,12 @@ void ValueStream::OnTransportAdvanced(float amount)
             mFloatSlider->Compute(i);
          mValues[mValueDisplayPointer] = mUIControl->GetValue();
          mValueDisplayPointer = (mValueDisplayPointer + 1) % mValues.size();
+      }
+      for (const auto cable : mModCable->GetPatchCables())
+      {
+         const auto target = dynamic_cast<IUIControl*>(cable->GetTarget());
+         if (target)
+            target->SetValue(mUIControl->GetValue(), gTime);
       }
    }
 }
