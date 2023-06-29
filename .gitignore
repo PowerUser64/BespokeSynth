@@ -64,6 +64,9 @@ xcuserdata/
 # Icon must end with two \r
 Icon
 
+# nix+direnv
+resuit
+.direnv/
 
 # Thumbnails
 ._*
