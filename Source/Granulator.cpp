@@ -147,11 +147,13 @@ void Grain::Process(double time, ChannelBuffer* buffer, int bufferLength, float*
    if (time >= mStartTime && time <= mEndTime && mVol != 0)
    {
       mPos += mSpeedMult * mOwner->mSpeed;
+      // 20ms fade out to avoid clicks
+      mFadeOut = (time + 20 >= mEndTime) ? (mEndTime) - (mStartToEnd - time - mStartTime) : 1;
       float window = GetWindow(time);
       for (int ch = 0; ch < buffer->NumActiveChannels(); ++ch)
       {
          float sample = GetInterpolatedSample(mPos, buffer, bufferLength, std::clamp(ch + mStereoPosition, 0.f, 1.f));
-         output[ch] += sample * window * mVol * (1 + (ch == 0 ? mStereoPosition : -mStereoPosition));
+         output[ch] += sample * window * mFadeOut * mVol * (1 + (ch == 0 ? mStereoPosition : -mStereoPosition));
       }
    }
 }

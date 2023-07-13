@@ -46,6 +46,7 @@ public:
 private:
    double GetWindow(double time);
    double mPos{ 0 };
+   double mFadeOut{ 1 };
    float mSpeedMult{ 1 };
    double mStartTime{ 0 };
    double mEndTime{ 1 };
