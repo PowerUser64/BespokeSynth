@@ -155,6 +155,7 @@
 #include "ScaleDegree.h"
 #include "NoteChainNode.h"
 #include "NoteDelayer.h"
+#include "NoteSwinger.h"
 #include "TimelineControl.h"
 #include "VelocityScaler.h"
 #include "KeyboardDisplay.h"
@@ -359,6 +360,7 @@ ModuleFactory::ModuleFactory()
    REGISTER(ScaleDegree, scaledegree, kModuleCategory_Note);
    REGISTER(NoteChainNode, notechain, kModuleCategory_Instrument);
    REGISTER(NoteDelayer, notedelayer, kModuleCategory_Note);
+   REGISTER(NoteSwinger, noteswinger, kModuleCategory_Note);
    REGISTER(VelocityScaler, velocityscaler, kModuleCategory_Note);
    REGISTER(KeyboardDisplay, keyboarddisplay, kModuleCategory_Instrument);
    REGISTER(Ramper, ramper, kModuleCategory_Modulator);

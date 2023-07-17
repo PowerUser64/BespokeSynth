@@ -374,6 +374,8 @@ target_sources(BespokeSynth PRIVATE
     NoteCreator.h
     NoteDelayer.cpp
     NoteDelayer.h
+    NoteSwinger.cpp
+    NoteSwinger.h
     NoteDisplayer.cpp
     NoteDisplayer.h
     NoteEcho.cpp
