@@ -775,7 +775,11 @@ vocoder~frequency band-based vocoder. this must be paired with a "vocodercarrier
 
 
 voicesetter~set a specific Voice channel index for a note
+<<<<<<< HEAD
 ~voice index~current set voice channel index
+=======
+~Voice Index~current set voice channel index
+>>>>>>> 04e86eaf (Added new voicesetter node)
 
 
 
@@ -1464,7 +1468,7 @@ drumplayer~sample player intended for drum playback
 ~repeat~if quantizing, should held notes repeat at that interval?
 ~full vel~always play drum hits at full velocity
 ~single voice~only play a single drum hit at once, choking all others out (as if they all shared the same linkid)
-~vol *~volume of sample 
+~vol *~volume of sample
 ~speed *~speed of sample
 ~pan *~stereo pan position of sample
 ~widen *~stereo delay of sample to create width
