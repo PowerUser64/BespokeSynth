@@ -12,6 +12,12 @@
 #include <memory>
 #include "VSTScanner.h"
 
+#ifdef __linux__
+#include <unistd.h>
+#include <csignal>
+#include "ModularSynth.h"
+#endif
+
 #include "VersionInfo.h"
 
 using namespace juce;
@@ -24,6 +30,28 @@ juce::ApplicationProperties& getAppProperties()
 {
    return *appProperties;
 }
+
+#ifdef __linux__
+// Helper function to catch process signals
+void signalHandler(int signal)
+{
+   switch (signal)
+   {
+      // in the LADISH session protocol, SIGUSR1 is used to tell programs to save
+      case SIGUSR1:
+         std::cout << "Caught SIGUSR1, saving..." << std::endl;
+         if (TheSynth != nullptr)
+            TheSynth->SaveCurrentState();
+         break;
+
+      default:
+         // Shouldn't get here unless this function is used improperly somewhere else
+         std::cerr << "Error: caught unknown signal: " << signal << ". Aborting." << std::endl;
+         exit(1);
+         break;
+   }
+}
+#endif
 
 //==============================================================================
 class BespokeApplication : public JUCEApplication
@@ -39,6 +67,12 @@ public:
    //==============================================================================
    void initialise(const String& commandLine) override
    {
+
+#ifdef __linux__
+      // Handle SIGUSR1
+      std::signal(SIGUSR1, signalHandler);
+#endif
+
       auto scannerSubprocess = std::make_unique<PluginScannerSubprocess>();
 
       if (scannerSubprocess->initialiseFromCommandLine(commandLine, kScanProcessUID))
