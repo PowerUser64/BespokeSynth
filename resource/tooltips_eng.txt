@@ -1456,7 +1456,7 @@ drumplayer~sample player intended for drum playback
 ~quantize~quantize input to this interval
 ~repeat~if quantizing, should held notes repeat at that interval?
 ~full vel~always play drum hits at full velocity
-~vol *~volume of sample 
+~vol *~volume of sample
 ~speed *~speed of sample
 ~pan *~stereo pan position of sample
 ~widen *~stereo delay of sample to create width
