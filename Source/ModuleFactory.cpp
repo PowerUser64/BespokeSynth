@@ -267,6 +267,7 @@
 #include "DataProvider.h"
 #include "PulseLimit.h"
 #include "Acciaccatura.h"
+#include "FaustLoader.h"
 
 #include <juce_core/juce_core.h>
 
@@ -488,6 +489,7 @@ ModuleFactory::ModuleFactory()
    REGISTER(DataProvider, dataprovider, kModuleCategory_Modulator);
    REGISTER(PulseLimit, pulselimit, kModuleCategory_Pulse);
    REGISTER(Acciaccatura, acciaccatura, kModuleCategory_Note);
+   REGISTER(FaustLoader, faustloader, kModuleCategory_Instrument);
 
    //REGISTER_EXPERIMENTAL(MidiPlayer, midiplayer, kModuleCategory_Instrument);
    REGISTER_HIDDEN(Autotalent, autotalent, kModuleCategory_Audio);

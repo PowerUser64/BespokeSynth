@@ -185,6 +185,8 @@ target_sources(BespokeSynth PRIVATE
     FMSynth.h
     FMVoice.cpp
     FMVoice.h
+    FaustLoader.cpp
+    FaustLoader.h
     FeedbackModule.cpp
     FeedbackModule.h
     FileStream.cpp
