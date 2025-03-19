@@ -23,16 +23,13 @@
 //
 //
 
-#ifndef __Bespoke__SignalGenerator__
-#define __Bespoke__SignalGenerator__
+#pragma once
 
-#include <iostream>
 #include "IAudioSource.h"
 #include "INoteReceiver.h"
 #include "IDrawableModule.h"
 #include "Slider.h"
 #include "DropdownList.h"
-#include "Checkbox.h"
 #include "EnvOscillator.h"
 #include "Ramp.h"
 #include "IPulseReceiver.h"
@@ -58,7 +55,7 @@ public:
    void SetEnabled(bool enabled) override;
 
    //INoteReceiver
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
    void SendCC(int control, int value, int voiceIdx = -1) override {}
 
    //IPulseReceiver
@@ -137,5 +134,3 @@ private:
 
    int mLoadRev{ -1 };
 };
-
-#endif /* defined(__Bespoke__SignalGenerator__) */

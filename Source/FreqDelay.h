@@ -23,10 +23,8 @@
 //
 //
 
-#ifndef __modularSynth__FreqDelay__
-#define __modularSynth__FreqDelay__
+#pragma once
 
-#include <iostream>
 #include "IAudioProcessor.h"
 #include "IDrawableModule.h"
 #include "INoteReceiver.h"
@@ -49,7 +47,7 @@ public:
    void Process(double time) override;
 
    //INoteReceiver
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
    void SendCC(int control, int value, int voiceIdx = -1) override {}
 
    void FloatSliderUpdated(FloatSlider* slider, float oldVal, double time) override;
@@ -74,5 +72,3 @@ private:
 
    DelayEffect mDelayEffect;
 };
-
-#endif /* defined(__modularSynth__FreqDelay__) */

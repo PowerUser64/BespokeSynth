@@ -23,10 +23,8 @@
 //
 //
 
-#ifndef __Bespoke__LabelDisplay__
-#define __Bespoke__LabelDisplay__
+#pragma once
 
-#include <iostream>
 #include <utility>
 #include "IDrawableModule.h"
 #include "OpenFrameworksPort.h"
@@ -60,15 +58,15 @@ private:
    void DrawModule() override;
    void GetModuleDimensions(float& width, float& height) override;
 
-   float mWidth;
-   float mHeight;
+   float mWidth{ 200 };
+   float mHeight{ 20 };
 
    Checkbox* mShowControlsCheckbox{ nullptr };
    bool mShowControls{ true };
 
    char mLabel[MAX_TEXTENTRY_LENGTH]{ "Label" };
    TextEntry* mLabelEntry{ nullptr };
-   int mLabelSize{ 42 };
+   int mLabelSize{ 40 };
    IntSlider* mLabelSizeSlider{ nullptr };
 
    RetinaTrueTypeFont mLabelFont{ gFont };
@@ -103,6 +101,3 @@ private:
    };
    std::vector<LabelColor> mColors{};
 };
-
-
-#endif /* defined(__Bespoke__LabelDisplay__) */

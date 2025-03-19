@@ -27,8 +27,6 @@
 #include "SynthGlobals.h"
 #include "ModularSynth.h"
 
-#include <cstring>
-
 #include "Slider.h"
 #include "UIControlMacros.h"
 
@@ -68,9 +66,9 @@ void LabelDisplay::CreateUIControls()
    UIBLOCK_SHIFTRIGHT();
    INTSLIDER(mLabelSizeSlider, "size", &mLabelSize, 25, 500);
    UIBLOCK_SHIFTRIGHT();
-   DROPDOWN(mLabelFontDropdown, "font", &mLabelFontIndex, 60);
+   DROPDOWN(mLabelFontDropdown, "font", &mLabelFontIndex, 90);
    UIBLOCK_SHIFTRIGHT();
-   DROPDOWN(mLabelColorDropdown, "color", &mLabelColorIndex, 60);
+   DROPDOWN(mLabelColorDropdown, "color", &mLabelColorIndex, 72);
    ENDUIBLOCK(mWidth, mHeight);
 
    for (int i = 0; i < mFonts.size(); i++)
@@ -110,9 +108,9 @@ void LabelDisplay::IntSliderUpdated(IntSlider* slider, int oldVal, double time)
 
 void LabelDisplay::DropdownUpdated(DropdownList* list, int oldVal, double time)
 {
-   if (list == mLabelFontDropdown)
+   if (list == mLabelFontDropdown && mLabelFontIndex >= 0 && mLabelFontIndex < mFonts.size())
       mLabelFont = mFonts[mLabelFontIndex].font;
-   else if (list == mLabelColorDropdown)
+   else if (list == mLabelColorDropdown && mLabelColorIndex >= 0 && mLabelColorIndex < mColors.size())
       mLabelColor = mColors[mLabelColorIndex].color;
 }
 

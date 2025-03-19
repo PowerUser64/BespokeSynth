@@ -23,10 +23,8 @@
 //
 //
 
-#ifndef __modularSynth__Beats__
-#define __modularSynth__Beats__
+#pragma once
 
-#include <iostream>
 #include "IAudioSource.h"
 #include "EnvOscillator.h"
 #include "IDrawableModule.h"
@@ -146,5 +144,3 @@ private:
    std::vector<BeatColumn*> mBeatColumns;
    int mHighlightColumn{ -1 };
 };
-
-#endif /* defined(__modularSynth__Beats__) */

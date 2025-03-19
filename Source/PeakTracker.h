@@ -23,10 +23,7 @@
 //
 //
 
-#ifndef __modularSynth__PeakTracker__
-#define __modularSynth__PeakTracker__
-
-#include <iostream>
+#pragma once
 
 class PeakTracker
 {
@@ -35,6 +32,7 @@ public:
    float GetPeak() const { return mPeak; }
    void SetDecayTime(float time) { mDecayTime = time; }
    void SetLimit(float limit) { mLimit = limit; }
+   float GetLimit() const { return mLimit; }
    void Reset() { mPeak = 0; }
    double GetLastHitLimitTime() const { return mHitLimitTime; }
 
@@ -44,5 +42,3 @@ private:
    float mLimit{ -1 };
    double mHitLimitTime{ -9999 };
 };
-
-#endif /* defined(__modularSynth__PeakTracker__) */

@@ -23,10 +23,8 @@
 //
 //
 
-#ifndef __modularSynth__NoteOctaver__
-#define __modularSynth__NoteOctaver__
+#pragma once
 
-#include <iostream>
 #include "NoteEffectBase.h"
 #include "IDrawableModule.h"
 #include "Checkbox.h"
@@ -47,7 +45,7 @@ public:
    void SetEnabled(bool enabled) override { mEnabled = enabled; }
 
    //INoteReceiver
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
 
    void CheckboxUpdated(Checkbox* checkbox, double time) override;
    //IIntSliderListener
@@ -83,6 +81,3 @@ private:
    Checkbox* mRetriggerCheckbox{ nullptr };
    bool mRetrigger{ false };
 };
-
-
-#endif /* defined(__modularSynth__NoteOctaver__) */

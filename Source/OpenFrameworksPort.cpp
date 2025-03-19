@@ -17,11 +17,11 @@
 **/
 /*
  ==============================================================================
- 
+
  OpenFrameworksPort.cpp
  Created: 30 May 2016 9:13:01pm
  Author:  Ryan Challinor
- 
+
  ==============================================================================
  */
 
@@ -29,13 +29,11 @@
 #include <windows.h>
 #endif
 
+#include "UserPrefs.h"
 #include "juce_opengl/juce_opengl.h"
 using namespace juce::gl;
 using namespace juce;
 #include <VersionInfo.h>
-
-//#include <chrono>
-#include <time.h>
 
 #include "OpenFrameworksPort.h"
 #include "nanovg/nanovg.h"
@@ -62,6 +60,31 @@ ofColor ofColor::clear(0, 0, 0, 0);
 NVGcontext* gNanoVG = nullptr;
 NVGcontext* gFontBoundsNanoVG = nullptr;
 
+std::string ofToSamplePath(const std::string& path)
+{
+   if (!path.empty() && (path[0] == '.' || juce::File::isAbsolutePath(path)))
+      return path;
+
+   auto result = ofToDataPath(path);
+
+   auto samplesPath = UserPrefs.samples_path.Get();
+   if (samplesPath.empty())
+      samplesPath = "samples/";
+
+   if (juce::File::isAbsolutePath(samplesPath))
+      result = samplesPath;
+   else
+      result += samplesPath;
+
+#if BESPOKE_WINDOWS
+   std::replace(begin(result), end(result), '\\', '/');
+#endif
+   if (result.back() != '/')
+      result += '/';
+
+   return result + path;
+}
+
 std::string ofToDataPath(const std::string& path)
 {
    if (!path.empty() && (path[0] == '.' || juce::File::isAbsolutePath(path)))
@@ -69,7 +92,8 @@ std::string ofToDataPath(const std::string& path)
 
    static const auto sDataDir = []
    {
-      auto dataDir = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("BespokeSynth").getFullPathName().toStdString();
+      auto defaultDataDir = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("BespokeSynth").getFullPathName().toStdString();
+      auto dataDir = juce::SystemStats::getEnvironmentVariable("BESPOKE_DATA_DIR", defaultDataDir).toStdString();
 #if BESPOKE_WINDOWS
       std::replace(begin(dataDir), end(dataDir), '\\', '/');
 #endif
@@ -296,6 +320,12 @@ float ofToFloat(const std::string& floatString)
    return str.getFloatValue();
 }
 
+double ofToDouble(const std::string& doubleString)
+{
+   const String str(doubleString);
+   return str.getDoubleValue();
+}
+
 int ofHexToInt(const std::string& hexString)
 {
    String str(hexString);
@@ -376,16 +406,12 @@ float ofRandom(float max)
 
 float ofRandom(float x, float y)
 {
-   float high = 0;
-   float low = 0;
-   float randNum = 0;
    // if there is no range, return the value
    if (x == y)
       return x; // float == ?, wise? epsilon?
-   high = MAX(x, y);
-   low = MIN(x, y);
-   randNum = low + ((high - low) * gRandom01(gRandom));
-   return randNum;
+   const float high = MAX(x, y);
+   const float low = MIN(x, y);
+   return low + ((high - low) * gRandom01(gRandom));
 }
 
 void ofSetCircleResolution(float res)
@@ -552,6 +578,17 @@ void ofTriangle(float x1, float y1, float x2, float y2, float x3, float y3)
    ofEndShape();
 }
 
+//static
+ofRectangle ofRectangle::include(const ofRectangle& a, const ofRectangle& b)
+{
+   ofRectangle ret;
+   ret.x = MIN(a.getMinX(), b.getMinX());
+   ret.y = MIN(a.getMinY(), b.getMinY());
+   ret.width = MAX(a.getMaxX(), b.getMaxX()) - ret.x;
+   ret.height = MAX(a.getMaxY(), b.getMaxY()) - ret.y;
+   return ret;
+}
+
 float ofRectangle::getMinX() const
 {
    return MIN(x, x + width); // - width
@@ -695,6 +732,7 @@ void ofColor::setHsb(int hue, int saturation, int brightness)
       float tv = ((1.f - saturationNorm * (1.f - hueSixRemainder)) * brightness);
       switch (hueSixCategory)
       {
+         default:
          case 0:
          case 6: // r
             r = brightness;

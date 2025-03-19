@@ -77,10 +77,23 @@ void MultitapDelay::Process(double time)
 
    IAudioReceiver* target = GetTarget();
 
-   if (!mEnabled || target == nullptr)
+   if (target == nullptr)
       return;
 
    SyncBuffers();
+
+   if (!mEnabled)
+   {
+      for (int ch = 0; ch < GetBuffer()->NumActiveChannels(); ++ch)
+      {
+         Add(target->GetBuffer()->GetChannel(ch), GetBuffer()->GetChannel(ch), GetBuffer()->BufferSize());
+         GetVizBuffer()->WriteChunk(GetBuffer()->GetChannel(ch), GetBuffer()->BufferSize(), ch);
+      }
+
+      GetBuffer()->Reset();
+      return;
+   }
+
    mWriteBuffer.SetNumActiveChannels(GetBuffer()->NumActiveChannels());
    mDelayBuffer.SetNumChannels(GetBuffer()->NumActiveChannels());
    for (int t = 0; t < mNumTaps; ++t)
@@ -194,9 +207,9 @@ void MultitapDelay::IntSliderUpdated(IntSlider* slider, int oldVal, double time)
 {
 }
 
-void MultitapDelay::PlayNote(double time, int pitch, int velocity, int voiceIdx, ModulationParameters modulation)
+void MultitapDelay::PlayNote(NoteMessage note)
 {
-   if (voiceIdx == -1 || voiceIdx >= kNumMPETaps)
+   if (note.voiceIdx == -1 || note.voiceIdx >= kNumMPETaps)
       return;
 
    /*if (velocity > 0)

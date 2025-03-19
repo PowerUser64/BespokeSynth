@@ -23,18 +23,14 @@
 //
 //
 
-#ifndef __modularSynth__SampleFinder__
-#define __modularSynth__SampleFinder__
+#pragma once
 
-#include <iostream>
 #include "IAudioSource.h"
-#include "EnvOscillator.h"
 #include "INoteReceiver.h"
 #include "IDrawableModule.h"
 #include "Checkbox.h"
 #include "Slider.h"
 #include "DropdownList.h"
-#include "Transport.h"
 #include "ClickButton.h"
 #include "SampleDrawer.h"
 
@@ -53,7 +49,7 @@ public:
    void CreateUIControls() override;
 
    //INoteReceiver
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
    void SendCC(int control, int value, int voiceIdx = -1) override {}
 
    //IAudioSource
@@ -118,5 +114,3 @@ private:
    bool mReverse{ false };
    Checkbox* mReverseCheckbox{ nullptr };
 };
-
-#endif /* defined(__modularSynth__SampleFinder__) */

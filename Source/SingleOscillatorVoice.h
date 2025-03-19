@@ -23,10 +23,8 @@
 //
 //
 
-#ifndef __modularSynth__SingleOscillatorVoice__
-#define __modularSynth__SingleOscillatorVoice__
+#pragma once
 
-#include <iostream>
 #include "OpenFrameworksPort.h"
 #include "IMidiVoice.h"
 #include "IVoiceParams.h"
@@ -60,7 +58,7 @@ public:
    float mFilterQ{ float(sqrt(2) / 2) };
    ::ADSR mFilterAdsr{ 1, 0, 1, 1000 };
 
-   float mVelToVolume{ .5 };
+   float mVelToVolume{ 1.0 };
    float mVelToEnvelope{ 0 };
 
    bool mLiteCPUMode{ false };
@@ -81,6 +79,7 @@ public:
    bool IsDone(double time) override;
 
    static float GetADSRScale(float velocity, float velToEnvelope);
+   static float GetADSRCurve(float velocity, float velToEnvelope);
 
    static const int kMaxUnison = 8;
 
@@ -110,5 +109,3 @@ private:
 
    IDrawableModule* mOwner;
 };
-
-#endif /* defined(__modularSynth__SingleOscillatorVoice__) */

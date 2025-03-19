@@ -23,10 +23,8 @@
 //
 //
 
-#ifndef __modularSynth__TextEntry__
-#define __modularSynth__TextEntry__
+#pragma once
 
-#include <iostream>
 #include <climits>
 #include "IUIControl.h"
 #include "SynthGlobals.h"
@@ -47,24 +45,6 @@ enum TextEntryType
    kTextEntry_Text,
    kTextEntry_Int,
    kTextEntry_Float
-};
-
-class IKeyboardFocusListener
-{
-public:
-   virtual ~IKeyboardFocusListener() {}
-   static void SetActiveKeyboardFocus(IKeyboardFocusListener* focus) { sCurrentKeyboardFocus = focus; }
-   static IKeyboardFocusListener* GetActiveKeyboardFocus() { return sCurrentKeyboardFocus; }
-   static void ClearActiveKeyboardFocus(bool notifyListeners);
-
-   virtual void OnKeyPressed(int key, bool isRepeat) = 0;
-
-   static IKeyboardFocusListener* sKeyboardFocusBeforeClick;
-
-private:
-   virtual void AcceptEntry(bool pressedEnter) {}
-   virtual void CancelEntry() {}
-   static IKeyboardFocusListener* sCurrentKeyboardFocus;
 };
 
 class TextEntry : public IUIControl, public IKeyboardFocusListener
@@ -90,6 +70,7 @@ public:
    const char* GetText() const { return mString; }
    TextEntryType GetTextEntryType() const { return mType; }
    void SetText(std::string text);
+   void SelectAll();
 
    void GetDimensions(float& width, float& height) override;
 
@@ -121,7 +102,6 @@ private:
    void AcceptEntry(bool pressedEnter) override;
    void CancelEntry() override;
    void MoveCaret(int pos, bool allowSelection = true);
-   void SelectAll();
    void OnClicked(float x, float y, bool right) override;
    bool MouseMoved(float x, float y) override;
 
@@ -150,5 +130,3 @@ private:
    bool mHovered{ false };
    bool mRequireEnterToAccept{ false };
 };
-
-#endif /* defined(__modularSynth__TextEntry__) */

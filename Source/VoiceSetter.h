@@ -23,8 +23,7 @@
 //
 //
 
-#ifndef __Bespoke__VoiceSetter__
-#define __Bespoke__VoiceSetter__
+#pragma once
 
 #include "NoteEffectBase.h"
 
@@ -40,7 +39,7 @@ public:
    void CreateUIControls() override;
 
    //INoteReceiver
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
 
    void LoadLayout(const ofxJSONElement& moduleInfo) override;
    void SetUpFromSaveData() override;
@@ -65,5 +64,3 @@ private:
    int mVoiceIdx{ 0 };
    IntSlider* mVoiceSlider{ nullptr };
 };
-
-#endif /* defined(__Bespoke__VoiceSetter__) */

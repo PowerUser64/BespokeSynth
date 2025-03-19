@@ -23,8 +23,7 @@
 //
 //
 
-#ifndef __Bespoke__PreviousNote__
-#define __Bespoke__PreviousNote__
+#pragma once
 
 #include "IDrawableModule.h"
 #include "NoteEffectBase.h"
@@ -41,7 +40,7 @@ public:
    void SetEnabled(bool enabled) override { mEnabled = enabled; }
 
    //INoteReceiver
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
 
    void LoadLayout(const ofxJSONElement& moduleInfo) override;
    void SetUpFromSaveData() override;
@@ -60,5 +59,3 @@ private:
    int mPitch{ -1 };
    int mVelocity{ 0 };
 };
-
-#endif /* defined(__Bespoke__PreviousNote__) */

@@ -23,10 +23,8 @@
 //
 //
 
-#ifndef __modularSynth__FloatSliderLFOControl__
-#define __modularSynth__FloatSliderLFOControl__
+#pragma once
 
-#include <iostream>
 #include "IDrawableModule.h"
 #include "Checkbox.h"
 #include "Transport.h"
@@ -37,6 +35,7 @@
 #include "PatchCableSource.h"
 #include "DropdownList.h"
 #include "IModulator.h"
+#include "IPulseReceiver.h"
 
 struct LFOSettings
 {
@@ -49,20 +48,22 @@ struct LFOSettings
    float mShuffle{ 0 };
    float mFreeRate{ 1 };
    float mLength{ 1 };
+   float mMinValue{ 0 };
+   float mMaxValue{ 1 };
    bool mLowResMode{ false };
 
    void SaveState(FileStreamOut& out) const;
    void LoadState(FileStreamIn& in);
 };
 
-class FloatSliderLFOControl : public IDrawableModule, public IRadioButtonListener, public IFloatSliderListener, public IButtonListener, public IDropdownListener, public IModulator
+class FloatSliderLFOControl : public IDrawableModule, public IRadioButtonListener, public IFloatSliderListener, public IButtonListener, public IDropdownListener, public IModulator, public IPulseReceiver
 {
 public:
    FloatSliderLFOControl();
    static IDrawableModule* Create() { return new FloatSliderLFOControl(); }
    static bool AcceptsAudio() { return false; }
    static bool AcceptsNotes() { return false; }
-   static bool AcceptsPulses() { return false; }
+   static bool AcceptsPulses() { return true; }
    void Delete() { delete this; }
    void DrawModule() override;
 
@@ -91,6 +92,9 @@ public:
    float Value(int samplesIn = 0) override;
    bool Active() const override { return mEnabled; }
    bool InitializeWithZeroRange() const override { return true; }
+
+   //IPulseReceiver
+   void OnPulse(double time, float velocity, int flags) override;
 
    //IPatchable
    void PostRepatch(PatchCableSource* cableSource, bool fromUserClick) override;
@@ -154,5 +158,3 @@ private:
    static int sNextLFOIndex;
    static bool sInitialized;
 };
-
-#endif /* defined(__modularSynth__FloatSliderLFOControl__) */

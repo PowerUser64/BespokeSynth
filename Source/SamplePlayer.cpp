@@ -31,7 +31,6 @@
 #include "SynthGlobals.h"
 #include "ModularSynth.h"
 #include "Profiler.h"
-#include "FillSaveDropdown.h"
 #include "PatchCableSource.h"
 #include "Scale.h"
 #include "UIControlMacros.h"
@@ -385,26 +384,26 @@ void SamplePlayer::Process(double time)
    GetBuffer()->Reset();
 }
 
-void SamplePlayer::PlayNote(double time, int pitch, int velocity, int voiceIdx /*= -1*/, ModulationParameters modulation /*= ModulationParameters()*/)
+void SamplePlayer::PlayNote(NoteMessage note)
 {
    if (!mEnabled)
       return;
 
    if (mSelectPlayedCuePoint)
-      mRecentPlayedCuePoint = pitch;
+      mRecentPlayedCuePoint = note.pitch;
 
-   if (!NoteInputBuffer::IsTimeWithinFrame(time) && GetTarget() && mSample)
+   if (!NoteInputBuffer::IsTimeWithinFrame(note.time) && GetTarget() && mSample)
    {
-      mNoteInputBuffer.QueueNote(time, pitch, velocity, voiceIdx, modulation);
+      mNoteInputBuffer.QueueNote(note);
       return;
    }
 
-   if (velocity > 0 && mSample != nullptr)
-      PlayCuePoint(time, pitch, velocity, modulation.pitchBend ? exp2(modulation.pitchBend->GetValue(0)) : 1, (modulation.modWheel ? modulation.modWheel->GetValue(0) : ModulationParameters::kDefaultModWheel) - ModulationParameters::kDefaultModWheel);
+   if (note.velocity > 0 && mSample != nullptr)
+      PlayCuePoint(note.time, note.pitch, note.velocity, note.modulation.pitchBend ? exp2(note.modulation.pitchBend->GetValue(0)) : 1, (note.modulation.modWheel ? note.modulation.modWheel->GetValue(0) : ModulationParameters::kDefaultModWheel) - ModulationParameters::kDefaultModWheel);
 
-   if (velocity == 0 && mStopOnNoteOff)
+   if (note.velocity == 0 && mStopOnNoteOff)
    {
-      mAdsr.Stop(time);
+      mAdsr.Stop(note.time);
    }
 }
 
@@ -747,7 +746,7 @@ void SamplePlayer::LoadFile()
    auto file_pattern = TheSynth->GetAudioFormatManager().getWildcardForAllFormats();
    if (File::areFileNamesCaseSensitive())
       file_pattern += ";" + file_pattern.toUpperCase();
-   FileChooser chooser("Load sample", File(ofToDataPath("samples")),
+   FileChooser chooser("Load sample", File(ofToSamplePath("")),
                        file_pattern, true, false, TheSynth->GetFileChooserParent());
    if (chooser.browseForFileToOpen())
    {
@@ -762,7 +761,7 @@ void SamplePlayer::LoadFile()
 
 void SamplePlayer::SaveFile()
 {
-   FileChooser chooser("Save sample", File(ofToDataPath("samples")),
+   FileChooser chooser("Save sample", File(ofToSamplePath("")),
                        "*.wav", true, false, TheSynth->GetFileChooserParent());
    if (chooser.browseForFileToSave(true))
    {
@@ -864,7 +863,7 @@ bool SamplePlayer::MouseMoved(float x, float y)
          // find cue point closest to but not exceeding the cursor position
          int bestCuePointIndex = -1;
          float bestCuePointStart = 0.;
-         for (size_t i = 0; i < mSampleCuePoints.size(); ++i)
+         for (int i = 0; i < (int)mSampleCuePoints.size(); ++i)
          {
             float startSeconds = mSampleCuePoints[i].startSeconds;
             float lengthSeconds = mSampleCuePoints[i].lengthSeconds;
@@ -1039,7 +1038,7 @@ void SamplePlayer::DrawModule()
          ofSetColor(255, 255, 255, 50);
          ofRect(0, 0, (mWidth - 10) * mSample->GetSampleLoadProgress(), mHeight - 65);
          ofSetColor(40, 40, 40);
-         DrawTextNormal("loading sample...", 10, 10, 10);
+         DrawTextNormal("loading sample...", 10, 10, 8);
          ofPopStyle();
       }
    }
@@ -1054,7 +1053,7 @@ void SamplePlayer::DrawModule()
       ofSetColor(255, 255, 255, 50);
       ofRect(0, 0, mWidth - 10, mHeight - 65);
       ofSetColor(220, 0, 0);
-      DrawTextNormal(mErrorString, 10, 10, 10);
+      DrawTextNormal(mErrorString, 10, 10, 8);
       ofPopStyle();
    }
    else if (mSample && mSample->LengthInSamples() > 0)
@@ -1080,7 +1079,7 @@ void SamplePlayer::DrawModule()
       if (playPosition >= 0)
       {
          float x = ofMap(playPosition, GetZoomStartSample(), GetZoomEndSample(), 0, sampleWidth);
-         DrawTextNormal(ofToString(playPosition / (gSampleRate * mSample->GetSampleRateRatio()), 1), x + 2, mHeight - 65, 11);
+         DrawTextNormal(ofToString(playPosition / (gSampleRate * mSample->GetSampleRateRatio()), 1), x + 2, mHeight - 65, 9);
       }
 
       if (mShowGrid)
@@ -1113,7 +1112,7 @@ void SamplePlayer::DrawModule()
       ofSetColor(255, 255, 255, 50);
       ofRect(0, 0, mWidth - 10, mHeight - 65);
       ofSetColor(40, 40, 40);
-      DrawTextNormal("drag and drop a sample here...", 10, 10, 10);
+      DrawTextNormal("drag and drop a sample here...", 10, 10, 8);
       ofPopStyle();
    }
 
@@ -1138,7 +1137,7 @@ void SamplePlayer::DrawModule()
                ofRect(x, 0, 15, 10);
                ofFill();
             }
-            DrawTextNormal(ofToString((int)i), x + 2, 8, 11);
+            DrawTextNormal(ofToString((int)i), x + 2, 8, 9);
 
             if (i == mHoveredCuePointIndex)
             {

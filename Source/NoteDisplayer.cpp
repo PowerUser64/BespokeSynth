@@ -45,13 +45,17 @@ void NoteDisplayer::DrawModule()
 
 void NoteDisplayer::DrawNoteName(int pitch, float y) const
 {
-   DrawTextNormal(NoteName(pitch) + ofToString(pitch / 12 - 2) + " (" + ofToString(pitch) + ")" + " vel:" + ofToString(mVelocities[pitch]), 4, y);
+   DrawTextNormal(NoteName(pitch) + ofToString(pitch / 12 - 2) + " (" + ofToString(pitch) + ")" +
+                  " vel:" + ofToString(mVelocities[pitch]) +
+                  " voiceId:" + ofToString(mVoiceIds[pitch]),
+                  4, y);
 }
 
-void NoteDisplayer::PlayNote(double time, int pitch, int velocity, int voiceIdx, ModulationParameters modulation)
+void NoteDisplayer::PlayNote(NoteMessage note)
 {
-   PlayNoteOutput(time, pitch, velocity, voiceIdx, modulation);
-   mVelocities[pitch] = velocity;
+   PlayNoteOutput(note);
+   mVelocities[note.pitch] = note.velocity;
+   mVoiceIds[note.pitch] = note.voiceIdx;
 }
 
 void NoteDisplayer::LoadLayout(const ofxJSONElement& moduleInfo)

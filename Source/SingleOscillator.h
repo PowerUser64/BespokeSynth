@@ -23,14 +23,11 @@
 //
 //
 
-#ifndef __modularSynth__SingleOscillator__
-#define __modularSynth__SingleOscillator__
+#pragma once
 
-#include <iostream>
 #include "IAudioSource.h"
 #include "PolyphonyMgr.h"
 #include "SingleOscillatorVoice.h"
-#include "ADSR.h"
 #include "INoteReceiver.h"
 #include "IDrawableModule.h"
 #include "Slider.h"
@@ -62,7 +59,7 @@ public:
    void SetEnabled(bool enabled) override;
 
    //INoteReceiver
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
    void SendCC(int control, int value, int voiceIdx = -1) override {}
 
    void DropdownUpdated(DropdownList* list, int oldVal, double time) override;
@@ -138,6 +135,3 @@ private:
    std::array<DebugLine, 20> mDebugLines;
    int mDebugLinesPos{ 0 };
 };
-
-
-#endif /* defined(__modularSynth__SingleOscillator__) */

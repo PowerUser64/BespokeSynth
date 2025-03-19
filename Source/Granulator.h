@@ -23,11 +23,8 @@
 //
 //
 
-#ifndef __modularSynth__Granulator__
-#define __modularSynth__Granulator__
+#pragma once
 
-#include <iostream>
-#include "Ramp.h"
 #include "BiquadFilter.h"
 #include "ChannelBuffer.h"
 
@@ -60,7 +57,7 @@ class Granulator
 {
 public:
    Granulator();
-   void ProcessFrame(double time, ChannelBuffer* buffer, int bufferLength, double offset, float* output);
+   void ProcessFrame(double time, ChannelBuffer* buffer, int bufferLength, double offset, float speed, float* output);
    void Draw(float x, float y, float w, float h, int bufferStart, int viewLength, int bufferLength);
    void Reset();
    void ClearGrains();
@@ -76,7 +73,7 @@ public:
    float mWidth{ 1 };
 
 private:
-   void SpawnGrain(double time, double offset, float width);
+   void SpawnGrain(double time, double offset, float width, float speed);
 
    double mNextGrainSpawnMs{ 0 };
    int mNextGrainIdx{ 0 };
@@ -84,5 +81,3 @@ private:
    bool mLiveMode{ false };
    BiquadFilter mBiquad[ChannelBuffer::kMaxNumChannels]{};
 };
-
-#endif /* defined(__modularSynth__Granulator__) */

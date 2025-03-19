@@ -23,10 +23,8 @@
 //
 //
 
-#ifndef __modularSynth__Grid__
-#define __modularSynth__Grid__
+#pragma once
 
-#include <iostream>
 #include "IUIControl.h"
 #include "SynthGlobals.h"
 
@@ -55,7 +53,7 @@ struct GridCell
 class UIGrid : public IUIControl
 {
 public:
-   UIGrid(std::string name, int x, int y, int w, int h, int cols, int rows, IClickable* parent);
+   UIGrid(IClickable* parent, std::string name, int x, int y, int w, int h, int cols, int rows);
    void Init(int x, int y, int w, int h, int cols, int rows, IClickable* parent);
    void SetGrid(int cols, int rows);
    int GetRows() { return mRows; }
@@ -64,6 +62,7 @@ public:
    void MouseReleased() override;
    bool MouseMoved(float x, float y) override;
    bool MouseScrolled(float x, float y, float scrollX, float scrollY, bool isSmoothScroll, bool isInvertedScroll) override;
+   float GetVal(int col, int row) const;
    float& GetVal(int col, int row);
    void SetVal(int col, int row, float val, bool notifyListener = true);
    void SetHighlightCol(double time, int col);
@@ -94,13 +93,15 @@ public:
    float GetSubdividedValue(float position) const;
    bool GetNoHover() const override { return true; }
    bool CanBeTargetedBy(PatchCableSource* source) const override;
+   void SetCanBeUIControlTarget(bool targetable) { mCanBeUIControlTarget = targetable; }
 
    enum GridMode
    {
       kNormal,
       kMultislider,
       kHorislider,
-      kMultisliderBipolar
+      kMultisliderBipolar,
+      kMultisliderGrow
    };
    void SetGridMode(GridMode mode) { mGridMode = mode; }
 
@@ -108,9 +109,13 @@ public:
    ofVec2f GetCellPosition(int col, int row);
 
    //IUIControl
-   void SetFromMidiCC(float slider, double time, bool setViaModulator) override {}
-   void SetValue(float value, double time, bool forceUpdate = false) override {}
-   bool IsSliderControl() override { return false; }
+   void SetFromMidiCC(float slider, double time, bool setViaModulator) override;
+   float GetValueForMidiCC(float slider) const override;
+   void SetValue(float value, double time, bool forceUpdate = false) override;
+   float GetValue() const override;
+   float GetMidiValue() const override;
+   std::string GetDisplayValue(float val) const override;
+   bool IsSliderControl() override { return true; }
    bool IsButtonControl() override { return false; }
 
    void SaveState(FileStreamOut& out) override;
@@ -127,7 +132,7 @@ private:
       height = mHeight;
    }
 
-   int GetDataIndex(int col, int row) { return col + row * MAX_GRID_COLS; }
+   int GetDataIndex(int col, int row) const { return col + row * MAX_GRID_COLS; }
    float GetX(int col, int row) const;
    float GetY(int row) const;
    bool CanAdjustMultislider() const;
@@ -164,6 +169,7 @@ private:
    bool mShouldDrawValue{ false };
    bool mMomentary{ false };
    int mClickSubdivisions{ 1 };
+   bool mCanBeUIControlTarget{ false };
+   int mValueSetTargetCol{ 0 };
+   int mValueSetTargetRow{ 0 };
 };
-
-#endif /* defined(__modularSynth__Grid__) */

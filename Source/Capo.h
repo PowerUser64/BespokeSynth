@@ -23,10 +23,7 @@
 //
 //
 
-#ifndef __modularSynth__Capo__
-#define __modularSynth__Capo__
-
-#include <iostream>
+#pragma once
 
 #include "NoteEffectBase.h"
 #include "IDrawableModule.h"
@@ -47,7 +44,7 @@ public:
    void SetEnabled(bool enabled) override { mEnabled = enabled; }
 
    //INoteReceiver
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
 
    void CheckboxUpdated(Checkbox* checkbox, double time) override;
    //IIntSliderListener
@@ -87,6 +84,3 @@ private:
    Checkbox* mDiatonicCheckbox{ nullptr };
    bool mDiatonic{ false };
 };
-
-
-#endif /* defined(__modularSynth__Capo__) */

@@ -23,10 +23,8 @@
 //
 //
 
-#ifndef __Bespoke__MidiOutput__
-#define __Bespoke__MidiOutput__
+#pragma once
 
-#include <iostream>
 #include "MidiDevice.h"
 #include "IDrawableModule.h"
 #include "INoteReceiver.h"
@@ -49,7 +47,7 @@ public:
 
    void Init() override;
 
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
    void SendCC(int control, int value, int voiceIdx = -1) override;
 
    //IAudioPoller
@@ -95,5 +93,3 @@ private:
 
    std::vector<ChannelModulations> mChannelModulations;
 };
-
-#endif /* defined(__Bespoke__MidiOutput__) */

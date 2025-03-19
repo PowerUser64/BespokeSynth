@@ -23,13 +23,11 @@
 //
 //
 
-#ifndef __Bespoke__NoteVibrato__
-#define __Bespoke__NoteVibrato__
+#pragma once
 
 #include "NoteEffectBase.h"
 #include "IDrawableModule.h"
 #include "Slider.h"
-#include "Checkbox.h"
 #include "ModulationChain.h"
 #include "DropdownList.h"
 #include "Transport.h"
@@ -51,7 +49,7 @@ public:
    void OnTransportAdvanced(float amount) override;
 
    //INoteReceiver
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
 
    void FloatSliderUpdated(FloatSlider* slider, float oldVal, double time) override;
    void CheckboxUpdated(Checkbox* checkbox, double time) override;
@@ -78,5 +76,3 @@ private:
 
    Modulations mModulation{ true };
 };
-
-#endif /* defined(__Bespoke__NoteVibrato__) */

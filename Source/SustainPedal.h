@@ -23,10 +23,8 @@
 //
 //
 
-#ifndef __Bespoke__SustainPedal__
-#define __Bespoke__SustainPedal__
+#pragma once
 
-#include <iostream>
 #include "NoteEffectBase.h"
 #include "IDrawableModule.h"
 #include "Checkbox.h"
@@ -43,7 +41,7 @@ public:
    void CreateUIControls() override;
 
    //INoteReceiver
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
 
    void CheckboxUpdated(Checkbox* checkbox, double time) override;
 
@@ -65,5 +63,3 @@ private:
    bool mSustain{ false };
    Checkbox* mSustainCheckbox{ nullptr };
 };
-
-#endif /* defined(__Bespoke__SustainPedal__) */

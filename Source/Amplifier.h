@@ -23,14 +23,12 @@
 //
 //
 
-#ifndef __modularSynth__Amplifier__
-#define __modularSynth__Amplifier__
+#pragma once
 
-#include <iostream>
 #include "IAudioProcessor.h"
 #include "IDrawableModule.h"
 #include "Slider.h"
-#include "ClickButton.h"
+#include "LevelMeterDisplay.h"
 
 class Amplifier : public IAudioProcessor, public IDrawableModule, public IFloatSliderListener
 {
@@ -59,15 +57,19 @@ public:
 private:
    //IDrawableModule
    void DrawModule() override;
-   void GetModuleDimensions(float& w, float& h) override
+
+   void GetModuleDimensions(float& width, float& height) override
    {
-      w = 120;
-      h = 22;
+      width = mWidth;
+      height = mHeight;
    }
+
+   float mWidth{ 120 };
+   float mHeight{ 40 };
 
    float mGain{ 1 };
    FloatSlider* mGainSlider{ nullptr };
+   int mNumChannels{ 1 };
+   LevelMeterDisplay mLevelMeterDisplay{};
+   bool mShowLevelMeter{ true };
 };
-
-
-#endif /* defined(__modularSynth__Amplifier__) */

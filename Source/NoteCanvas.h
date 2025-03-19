@@ -23,8 +23,7 @@
 //
 //
 
-#ifndef __Bespoke__NoteCanvas__
-#define __Bespoke__NoteCanvas__
+#pragma once
 
 #include "IDrawableModule.h"
 #include "INoteSource.h"
@@ -59,7 +58,7 @@ public:
    void Resize(float w, float h) override;
    void KeyPressed(int key, bool isRepeat) override;
 
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
    void SendCC(int control, int value, int voiceIdx = -1) override {}
 
    void Clear(double time);
@@ -136,5 +135,3 @@ private:
 
    std::vector<ModulationParameters> mVoiceModulations;
 };
-
-#endif /* defined(__Bespoke__NoteCanvas__) */

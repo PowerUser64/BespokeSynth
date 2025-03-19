@@ -23,10 +23,8 @@
 //
 //
 
-#ifndef __modularSynth__ScaleDetect__
-#define __modularSynth__ScaleDetect__
+#pragma once
 
-#include <iostream>
 #include "NoteEffectBase.h"
 #include "IDrawableModule.h"
 #include "ClickButton.h"
@@ -55,7 +53,7 @@ public:
    void CreateUIControls() override;
 
    //INoteReceiver
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
 
    void ButtonClicked(ClickButton* button, double time) override;
    void DropdownUpdated(DropdownList* list, int oldVal, double time) override;
@@ -85,5 +83,3 @@ private:
    DropdownList* mMatchesDropdown{ nullptr };
    int mSelectedMatch{ 0 };
 };
-
-#endif /* defined(__modularSynth__ScaleDetect__) */

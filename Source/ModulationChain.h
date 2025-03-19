@@ -23,8 +23,7 @@
 //
 //
 
-#ifndef __Bespoke__ModulationChain__
-#define __Bespoke__ModulationChain__
+#pragma once
 
 #include "Ramp.h"
 #include "LFO.h"
@@ -73,7 +72,7 @@ struct ModulationParameters
    float pan{ 0 };
 
    static constexpr float kDefaultPitchBend{ 0 };
-   static constexpr float kDefaultModWheel{ .5f };
+   static constexpr float kDefaultModWheel{ 0 };
    static constexpr float kDefaultPressure{ .5f };
 };
 
@@ -96,5 +95,3 @@ private:
    ModulationCollection mGlobalModulation;
    std::vector<ModulationCollection> mVoiceModulations;
 };
-
-#endif /* defined(__Bespoke__ModulationChain__) */

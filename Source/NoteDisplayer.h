@@ -23,8 +23,7 @@
 //
 //
 
-#ifndef __Bespoke__NoteDisplayer__
-#define __Bespoke__NoteDisplayer__
+#pragma once
 
 #include "IDrawableModule.h"
 #include "NoteEffectBase.h"
@@ -39,7 +38,7 @@ public:
    static bool AcceptsPulses() { return false; }
 
    //INoteReceiver
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
 
    void LoadLayout(const ofxJSONElement& moduleInfo) override;
    void SetUpFromSaveData() override;
@@ -60,9 +59,8 @@ private:
 
    void DrawNoteName(int pitch, float y) const;
 
-   float mWidth{ 110 };
+   float mWidth{ 160 };
    float mHeight{ 60 };
    int mVelocities[128]{};
+   int mVoiceIds[128]{};
 };
-
-#endif /* defined(__Bespoke__NoteDisplayer__) */

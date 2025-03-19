@@ -23,12 +23,9 @@
 //
 //
 
-#ifndef __Bespoke__TitleBar__
-#define __Bespoke__TitleBar__
+#pragma once
 
-#include <iostream>
 #include <memory>
-#include <algorithm>
 #include "IDrawableModule.h"
 #include "DropdownList.h"
 #include "ClickButton.h"
@@ -172,6 +169,7 @@ private:
    DropdownList* mLoadLayoutDropdown{ nullptr };
    ClickButton* mDisplayHelpButton{ nullptr };
    ClickButton* mDisplayUserPrefsEditorButton{ nullptr };
+   ClickButton* mHomeButton{ nullptr };
    Checkbox* mEventLookaheadCheckbox{ nullptr };
    int mLoadLayoutIndex{ -1 };
    Checkbox* mShouldAutosaveCheckbox{ nullptr };
@@ -191,5 +189,3 @@ private:
 };
 
 extern TitleBar* TheTitleBar;
-
-#endif /* defined(__Bespoke__TitleBar__) */

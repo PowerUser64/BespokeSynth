@@ -39,7 +39,7 @@ void ModulationVisualizer::DrawModule()
       return;
 
    int y = 15;
-   DrawTextNormal("global:" + mGlobalModulation.GetInfoString(), 3, y);
+   DrawTextNormal("global: " + mGlobalModulation.GetInfoString(), 3, y);
    y += 15;
 
    for (int i = 0; i < kNumVoices; ++i)
@@ -52,19 +52,19 @@ void ModulationVisualizer::DrawModule()
    }
 }
 
-void ModulationVisualizer::PlayNote(double time, int pitch, int velocity, int voiceIdx, ModulationParameters modulation)
+void ModulationVisualizer::PlayNote(NoteMessage note)
 {
-   PlayNoteOutput(time, pitch, velocity, voiceIdx, modulation);
+   PlayNoteOutput(note);
 
-   if (voiceIdx == -1)
+   if (note.voiceIdx == -1)
    {
-      mGlobalModulation.mActive = velocity > 0;
-      mGlobalModulation.mModulators = modulation;
+      mGlobalModulation.mActive = note.velocity > 0;
+      mGlobalModulation.mModulators = note.modulation;
    }
    else
    {
-      mVoices[voiceIdx].mActive = velocity > 0;
-      mVoices[voiceIdx].mModulators = modulation;
+      mVoices[note.voiceIdx].mActive = note.velocity > 0;
+      mVoices[note.voiceIdx].mModulators = note.modulation;
    }
 }
 
@@ -89,5 +89,12 @@ std::string ModulationVisualizer::VizVoice::GetInfoString()
       info += "mod:" + ofToString(mModulators.modWheel->GetValue(0), 2) + "  ";
    if (mModulators.pressure)
       info += "pressure:" + ofToString(mModulators.pressure->GetValue(0), 2) + "  ";
+   info += "pan:" + ofToString(mModulators.pan, 2) + "  ";
    return info;
+}
+
+void ModulationVisualizer::Resize(float w, float h)
+{
+   mWidth = w;
+   mHeight = h;
 }

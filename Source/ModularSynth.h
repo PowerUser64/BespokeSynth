@@ -1,5 +1,4 @@
-#ifndef _MODULAR_SYNTH
-#define _MODULAR_SYNTH
+#pragma once
 
 #undef LoadString //undo some junk from a windows define
 
@@ -306,6 +305,7 @@ private:
    void FindCircularDependencies();
    bool FindCircularDependencySearch(std::list<IAudioSource*> chain, IAudioSource* searchFrom);
    void ClearCircularDependencyMarkers();
+   bool IsCurrentSaveStateATemplate() const;
 
    void ReadClipboardTextFromSystem();
 
@@ -350,7 +350,7 @@ private:
    UserPrefsEditor* mUserPrefsEditor{ nullptr };
 
    RollingBuffer* mGlobalRecordBuffer{ nullptr };
-   long long mRecordingLength{ 0 };
+   int mRecordingLength{ 0 };
 
    struct LogEventItem
    {
@@ -383,6 +383,7 @@ private:
    bool mLastClickWasEmptySpace{ false };
    bool mIsShiftPressed{ false };
    double mLastShiftPressTime{ -9999 };
+   ofVec2f mLastShiftPressMousePos{};
 
    std::string mLoadedLayoutPath;
    bool mWantReloadInitialLayout{ false };
@@ -447,5 +448,3 @@ private:
 };
 
 extern ModularSynth* TheSynth;
-
-#endif

@@ -23,8 +23,7 @@
 //
 //
 
-#ifndef __modularSynth__ModuleSaveData__
-#define __modularSynth__ModuleSaveData__
+#pragma once
 
 #include "TextEntry.h"
 
@@ -50,6 +49,8 @@ public:
    void SetFloat(std::string prop, float val, float min, float max, bool isTextField);
    void SetBool(std::string prop, bool val);
    void SetString(std::string prop, std::string val);
+   template <class T>
+   void SetEnum(std::string prop, T val) { SetInt(prop, (int)val); }
 
    void SetExtents(std::string prop, float min, float max);
 
@@ -117,5 +118,3 @@ private:
 
    std::list<SaveVal*> mValues;
 };
-
-#endif /* defined(__modularSynth__ModuleSaveData__) */

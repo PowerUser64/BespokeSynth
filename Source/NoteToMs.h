@@ -23,8 +23,7 @@
 //
 //
 
-#ifndef __Bespoke__NoteToMs__
-#define __Bespoke__NoteToMs__
+#pragma once
 
 #include "IDrawableModule.h"
 #include "INoteReceiver.h"
@@ -47,7 +46,7 @@ public:
    void SetEnabled(bool enabled) override { mEnabled = enabled; }
 
    //INoteReceiver
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
    void SendCC(int control, int value, int voiceIdx = -1) override {}
 
    //IModulator
@@ -76,5 +75,3 @@ private:
    float mPitch{ 0 };
    ModulationChain* mPitchBend{ nullptr };
 };
-
-#endif /* defined(__Bespoke__NoteToMs__) */

@@ -31,12 +31,10 @@
 #include "ModuleFactory.h"
 
 #include "LaunchpadKeyboard.h"
-#include "Scale.h"
 #include "DrumPlayer.h"
 #include "EffectChain.h"
 #include "LooperRecorder.h"
 #include "Chorder.h"
-#include "Transport.h"
 #include "Arpeggiator.h"
 #include "Razor.h"
 #include "Monophonify.h"
@@ -51,7 +49,6 @@
 #include "ScaleDetect.h"
 #include "KarplusStrong.h"
 #include "WhiteKeys.h"
-#include "Kicker.h"
 #include "RingModulator.h"
 #include "Neighborhooder.h"
 #include "Polyrhythms.h"
@@ -86,7 +83,6 @@
 //#include "Eigenharp.h"
 #include "Beats.h"
 #include "Sampler.h"
-#include "NoteTransformer.h"
 #include "SliderSequencer.h"
 #include "MultibandCompressor.h"
 #include "ControllingSong.h"
@@ -165,6 +161,7 @@
 #include "VolcaBeatsControl.h"
 #include "RadioSequencer.h"
 #include "TakeRecorder.h"
+#include "AudioSplitter.h"
 #include "Splitter.h"
 #include "Panner.h"
 #include "SamplePlayer.h"
@@ -264,8 +261,18 @@
 #include "DotSequencer.h"
 #include "VoiceSetter.h"
 #include "LabelDisplay.h"
+#include "ControlRecorder.h"
+#include "EuclideanSequencer.h"
+#include "SaveStateLoader.h"
+#include "DataProvider.h"
+#include "PulseLimit.h"
+#include "BassLineSequencer.h"
+#include "Acciaccatura.h"
+#include "ModulatorWander.h"
 
 #include <juce_core/juce_core.h>
+
+#include "PulseRouter.h"
 
 #define REGISTER(class, name, type) Register(#name, &(class ::Create), &(class ::CanCreate), type, false, false, class ::AcceptsAudio(), class ::AcceptsNotes(), class ::AcceptsPulses());
 #define REGISTER_HIDDEN(class, name, type) Register(#name, &(class ::Create), &(class ::CanCreate), type, true, false, class ::AcceptsAudio(), class ::AcceptsNotes(), class ::AcceptsPulses());
@@ -341,6 +348,7 @@ ModuleFactory::ModuleFactory()
    REGISTER(ControlSequencer, controlsequencer, kModuleCategory_Modulator);
    REGISTER(PitchSetter, pitchsetter, kModuleCategory_Note);
    REGISTER(NoteFilter, notefilter, kModuleCategory_Note);
+   REGISTER(PulseRouter, pulserouter, kModuleCategory_Pulse);
    REGISTER(RandomNoteGenerator, randomnote, kModuleCategory_Instrument);
    REGISTER(NoteToFreq, notetofreq, kModuleCategory_Modulator);
    REGISTER(MacroSlider, macroslider, kModuleCategory_Modulator);
@@ -373,6 +381,7 @@ ModuleFactory::ModuleFactory()
    REGISTER(NoteHumanizer, notehumanizer, kModuleCategory_Note);
    REGISTER(VolcaBeatsControl, volcabeatscontrol, kModuleCategory_Note);
    REGISTER(RadioSequencer, radiosequencer, kModuleCategory_Other);
+   REGISTER(AudioSplitter, audiosplitter, kModuleCategory_Audio);
    REGISTER(Splitter, splitter, kModuleCategory_Audio);
    REGISTER(Panner, panner, kModuleCategory_Audio);
    REGISTER(SamplePlayer, sampleplayer, kModuleCategory_Synth);
@@ -475,6 +484,14 @@ ModuleFactory::ModuleFactory()
    REGISTER(RhythmSequencer, rhythmsequencer, kModuleCategory_Note);
    REGISTER(DotSequencer, dotsequencer, kModuleCategory_Instrument);
    REGISTER(VoiceSetter, voicesetter, kModuleCategory_Note);
+   REGISTER(ControlRecorder, controlrecorder, kModuleCategory_Modulator);
+   REGISTER(EuclideanSequencer, euclideansequencer, kModuleCategory_Instrument);
+   REGISTER(SaveStateLoader, savestateloader, kModuleCategory_Other);
+   REGISTER(DataProvider, dataprovider, kModuleCategory_Modulator);
+   REGISTER(PulseLimit, pulselimit, kModuleCategory_Pulse);
+   REGISTER(BassLineSequencer, basslinesequencer, kModuleCategory_Instrument);
+   REGISTER(Acciaccatura, acciaccatura, kModuleCategory_Note);
+   REGISTER(ModulatorWander, wander, kModuleCategory_Modulator);
 
    //REGISTER_EXPERIMENTAL(MidiPlayer, midiplayer, kModuleCategory_Instrument);
    REGISTER_HIDDEN(Autotalent, autotalent, kModuleCategory_Audio);
@@ -588,7 +605,6 @@ namespace
          end = name.indexOfChar(' ');
       if (end == -1)
          end = name.length() - 1;
-      bool showModule = true;
       for (size_t j = 1; j < heldKeys.length(); ++j)
       {
          stringPos = name.substring(stringPos + 1, end + 1).indexOfChar(heldKeys[j]);
@@ -680,10 +696,7 @@ std::vector<ModuleFactory::Spawnable> ModuleFactory::GetSpawnableModules(std::st
          modules.push_back(preset);
    }
 
-   if (continuousString)
-      sort(modules.begin(), modules.end(), Spawnable::CompareLength);
-   else
-      sort(modules.begin(), modules.end(), Spawnable::CompareAlphabetical);
+   sort(modules.begin(), modules.end(), Spawnable::CompareAlphabetical);
 
    std::vector<ModuleFactory::Spawnable> ret;
    for (size_t i = 0; i < modules.size(); ++i)

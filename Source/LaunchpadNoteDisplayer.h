@@ -23,13 +23,10 @@
 //
 //
 
-#ifndef __modularSynth__LaunchpadNoteDisplayer__
-#define __modularSynth__LaunchpadNoteDisplayer__
+#pragma once
 
-#include <iostream>
 #include "NoteEffectBase.h"
 #include "IDrawableModule.h"
-#include "TextEntry.h"
 
 class LaunchpadKeyboard;
 
@@ -45,7 +42,7 @@ public:
    void SetLaunchpad(LaunchpadKeyboard* launchpad) { mLaunchpad = launchpad; }
 
    //INoteReceiver
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
 
    virtual void LoadLayout(const ofxJSONElement& moduleInfo) override;
    virtual void SetUpFromSaveData() override;
@@ -64,5 +61,3 @@ private:
 
    LaunchpadKeyboard* mLaunchpad{ nullptr };
 };
-
-#endif /* defined(__modularSynth__LaunchpadNoteDisplayer__) */

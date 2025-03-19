@@ -23,11 +23,8 @@
 //
 //
 
-#ifndef __modularSynth__SampleVoice__
-#define __modularSynth__SampleVoice__
+#pragma once
 
-#include <iostream>
-#include "OpenFrameworksPort.h"
 #include "IMidiVoice.h"
 #include "IVoiceParams.h"
 #include "ADSR.h"
@@ -38,12 +35,14 @@ class IDrawableModule;
 class SampleVoiceParams : public IVoiceParams
 {
 public:
-   ::ADSR mAdsr{ 10, 0, 1, 10 };
+   ::ADSR mAdsr{ 1, 0, 1, 10 };
    float mVol{ 1 };
-   float* mSampleData{ nullptr };
-   int mSampleLength{ 0 };
-   float mDetectedFreq{ -1 };
-   bool mLoop{ false };
+   Sample* mSample{ nullptr };
+   float mSamplePitch{ 48 };
+   int mStartSample{ 0 };
+   int mStopSample{ -1 };
+   int mSustainLoopStart{ -1 };
+   int mSustainLoopEnd{ -1 };
 };
 
 class SampleVoice : public IMidiVoice
@@ -51,6 +50,8 @@ class SampleVoice : public IMidiVoice
 public:
    SampleVoice(IDrawableModule* owner = nullptr);
    ~SampleVoice();
+
+   float GetSamplePosition() const { return mPos; }
 
    // IMidiVoice
    void Start(double time, float amount) override;
@@ -66,5 +67,3 @@ private:
    float mPos{ 0 };
    IDrawableModule* mOwner{ nullptr };
 };
-
-#endif /* defined(__modularSynth__SampleVoice__) */

@@ -23,8 +23,7 @@
 //
 //
 
-#ifndef __modularSynth__Sample__
-#define __modularSynth__Sample__
+#pragma once
 
 #include "OpenFrameworksPort.h"
 #include "ChannelBuffer.h"
@@ -76,7 +75,7 @@ public:
    std::string GetReadPath() const { return mReadPath; }
    static bool WriteDataToFile(const std::string& path, float** data, int numSamples, int channels = 1);
    static bool WriteDataToFile(const std::string& path, ChannelBuffer* data, int numSamples);
-   bool IsPlaying() { return mOffset < mNumSamples; }
+   bool IsPlaying() const { return mOffset < mNumSamples; }
    void LockDataMutex(bool lock) { lock ? mDataMutex.lock() : mDataMutex.unlock(); }
    void Create(int length);
    void Create(ChannelBuffer* data);
@@ -117,5 +116,3 @@ private:
    std::unique_ptr<juce::AudioSampleBuffer> mReadBuffer;
    int mSamplesLeftToRead{ 0 };
 };
-
-#endif /* defined(__modularSynth__Sample__) */

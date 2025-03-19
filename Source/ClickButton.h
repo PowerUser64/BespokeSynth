@@ -23,8 +23,7 @@
 //
 //
 
-#ifndef __modularSynth__ClickButton__
-#define __modularSynth__ClickButton__
+#pragma once
 
 #include "IPulseReceiver.h"
 #include "IUIControl.h"
@@ -61,6 +60,7 @@ public:
    ClickButton(IButtonListener* owner, const char* label, int x, int y, ButtonDisplayStyle displayStyle = ButtonDisplayStyle::kText);
    ClickButton(IButtonListener* owner, const char* label, IUIControl* anchor, AnchorDirection anchorDirection, ButtonDisplayStyle displayStyle = ButtonDisplayStyle::kText);
    void SetLabel(const char* label);
+   void UpdateWidth();
    void Render() override;
    void MouseReleased() override;
    bool MouseMoved(float x, float y) override;
@@ -109,5 +109,3 @@ private:
    IButtonListener* mOwner{ nullptr };
    ButtonDisplayStyle mDisplayStyle{ ButtonDisplayStyle::kText };
 };
-
-#endif /* defined(__modularSynth__ClickButton__) */

@@ -30,8 +30,6 @@
 #include "SynthGlobals.h"
 #include "ofxJSONElement.h"
 #include "ModularSynth.h"
-#include "Profiler.h"
-#include "MidiController.h"
 #include "ScriptModule.h"
 #include "PatchCableSource.h"
 
@@ -55,7 +53,7 @@ void GridModule::CreateUIControls()
 
    mMomentaryCheckbox = new Checkbox(this, "momentary", 40, 3, &mMomentary);
 
-   mGrid = new UIGrid("uigrid", 40, 22, 90, 90, 8, 8, this);
+   mGrid = new UIGrid(this, "uigrid", 40, 22, 90, 90, 8, 8);
    mGrid->SetListener(this);
    mGridControlTarget = new GridControlTarget(this, "grid", 4, 4);
 
@@ -105,9 +103,9 @@ void GridModule::OnGridButton(int x, int y, float velocity, IGridController* gri
    UpdateLights();
 }
 
-void GridModule::PlayNote(double time, int pitch, int velocity, int voiceIdx, ModulationParameters modulation)
+void GridModule::PlayNote(NoteMessage note)
 {
-   OnGridButton(pitch % GetCols(), ((pitch / GetCols()) % GetRows()), velocity / 127.0f, nullptr);
+   OnGridButton(note.pitch % GetCols(), ((note.pitch / GetCols()) % GetRows()), note.velocity / 127.0f, nullptr);
 }
 
 void GridModule::UpdateLights()
@@ -146,7 +144,7 @@ void GridModule::DrawModule()
    for (int i = 0; i < mGrid->GetRows() && i < (int)mLabels.size(); ++i)
    {
       ofVec2f pos = mGrid->GetCellPosition(0, i) + mGrid->GetPosition(true);
-      float scale = MIN(mGrid->IClickable::GetDimensions().y / mGrid->GetRows(), 12);
+      float scale = MIN(mGrid->IClickable::GetDimensions().y / mGrid->GetRows() - 2, 10);
       DrawTextNormal(mLabels[i], 2, pos.y - (scale / 8), scale);
    }
    ofPopStyle();

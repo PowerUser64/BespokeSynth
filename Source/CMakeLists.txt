@@ -1,6 +1,10 @@
 include(cmake/lib.cmake)
 include(cmake/versiontools.cmake)
-include(../libs/ableton-link/AbletonLinkConfig.cmake)
+if(BESPOKE_SYSTEM_ABLETONLINK)
+    find_package(AbletonLink NAMES AbletonLink ableton-link link REQUIRED)
+else()
+    include(../libs/ableton-link/AbletonLinkConfig.cmake)
+endif()
 
 juce_add_gui_app(BespokeSynth
     PRODUCT_NAME BespokeSynth
@@ -17,6 +21,19 @@ juce_add_gui_app(BespokeSynth
 
 bespoke_buildtime_version_info(BespokeSynth)
 
+if(MSVC)
+    if(BESPOKE_WERROR)
+        target_compile_options(BespokeSynth PRIVATE /WX)
+    endif()
+else()
+    if (APPLE)
+        target_compile_options(BespokeSynth PRIVATE -Wshorten-64-to-32)
+    endif()
+    if(BESPOKE_WERROR)
+        target_compile_options(BespokeSynth PRIVATE -Werror)
+    endif()
+endif()
+
 target_sources(BespokeSynth PRIVATE
     ADSR.cpp
     ADSR.h
@@ -24,6 +41,8 @@ target_sources(BespokeSynth PRIVATE
     ADSRDisplay.h
     AbletonLink.cpp
     AbletonLink.h
+    Acciaccatura.cpp
+    Acciaccatura.h
     Amplifier.cpp
     Amplifier.h
     Arpeggiator.cpp
@@ -38,12 +57,16 @@ target_sources(BespokeSynth PRIVATE
     AudioRouter.h
     AudioSend.cpp
     AudioSend.h
+    AudioSplitter.cpp
+    AudioSplitter.h
     AudioToCV.cpp
     AudioToCV.h
     AudioToPulse.cpp
     AudioToPulse.h
     Autotalent.cpp
     Autotalent.h
+    BassLineSequencer.cpp
+    BassLineSequencer.h
     BandVocoder.cpp
     BandVocoder.h
     BeatBloks.cpp
@@ -104,6 +127,8 @@ target_sources(BespokeSynth PRIVATE
     CommentDisplay.h
     Compressor.cpp
     Compressor.h
+    ControlRecorder.cpp
+    ControlRecorder.h
     ControlSequencer.cpp
     ControlSequencer.h
     ControlTactileFeedback.cpp
@@ -114,6 +139,8 @@ target_sources(BespokeSynth PRIVATE
     Curve.h
     CurveLooper.cpp
     CurveLooper.h
+    DataProvider.cpp
+    DataProvider.h
     DCOffset.cpp
     DCOffset.h
     DCRemoverEffect.cpp
@@ -148,6 +175,8 @@ target_sources(BespokeSynth PRIVATE
     EnvelopeEditor.h
     EnvelopeModulator.cpp
     EnvelopeModulator.h
+    EuclideanSequencer.cpp
+    EuclideanSequencer.h
     EventCanvas.cpp
     EventCanvas.h
     FFT.cpp
@@ -255,6 +284,8 @@ target_sources(BespokeSynth PRIVATE
     LaunchpadKeyboard.h
     LaunchpadNoteDisplayer.cpp
     LaunchpadNoteDisplayer.h
+    LevelMeterDisplay.cpp
+    LevelMeterDisplay.h
     LinkwitzRileyFilter.cpp
     LinkwitzRileyFilter.h
     LinnstrumentControl.cpp
@@ -336,6 +367,8 @@ target_sources(BespokeSynth PRIVATE
     ModulatorSmoother.h
     ModulatorSubtract.cpp
     ModulatorSubtract.h
+    ModulatorWander.cpp
+    ModulatorWander.h
     ModuleContainer.cpp
     ModuleContainer.h
     ModuleFactory.cpp
@@ -535,6 +568,10 @@ target_sources(BespokeSynth PRIVATE
     PulseGate.h
     PulseHocket.cpp
     PulseHocket.h
+    PulseLimit.cpp
+    PulseLimit.h
+    PulseRouter.cpp
+    PulseRouter.h
     PulseSequence.cpp
     PulseSequence.h
     PulseTrain.cpp
@@ -547,6 +584,10 @@ target_sources(BespokeSynth PRIVATE
     Push2Control.h
     QuickSpawnMenu.cpp
     QuickSpawnMenu.h
+    QwertyController.cpp
+    QwertyController.h
+    QwertyToPitchMapping.cpp
+    QwertyToPitchMapping.h
     RadioButton.cpp
     RadioButton.h
     RadioSequencer.cpp
@@ -589,6 +630,8 @@ target_sources(BespokeSynth PRIVATE
     Sampler.h
     SamplerGrid.cpp
     SamplerGrid.h
+    SaveStateLoader.cpp
+    SaveStateLoader.h
     Scale.cpp
     Scale.h
     ScaleDegree.cpp
@@ -834,11 +877,12 @@ else ()
     install(TARGETS BespokeSynth DESTINATION bin)
     install(DIRECTORY ${CMAKE_SOURCE_DIR}/resource DESTINATION share/BespokeSynth)
     install(FILES ${CMAKE_SOURCE_DIR}/scripts/installer_linux/BespokeSynth.desktop DESTINATION share/applications)
+    install(FILES ${CMAKE_SOURCE_DIR}/scripts/installer_linux/com.bespokesynth.BespokeSynth.metainfo.xml DESTINATION share/metainfo)
     install(FILES ${CMAKE_SOURCE_DIR}/bespoke_icon.png DESTINATION share/icons/hicolor/512x512/apps)
 endif ()
 
 target_link_libraries(BespokeSynth PRIVATE
-    bespoke::exprtk
+    exprtk::exprtk
     bespoke::freeverb
     $<IF:$<STREQUAL:${BESPOKE_SYSTEM_JSONCPP},OFF>,bespoke::json,jsoncpp>
     bespoke::leathers

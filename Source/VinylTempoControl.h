@@ -23,10 +23,8 @@
 //
 //
 
-#ifndef __Bespoke__VinylTempoControl__
-#define __Bespoke__VinylTempoControl__
+#pragma once
 
-#include <iostream>
 #include "IDrawableModule.h"
 #include "IAudioProcessor.h"
 #include "IModulator.h"
@@ -109,5 +107,3 @@ private:
    //float* mModulationBuffer;
    float mSpeed{ 1 };
 };
-
-#endif /* defined(__Bespoke__VinylTempoControl__) */

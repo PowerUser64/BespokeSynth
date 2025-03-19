@@ -30,6 +30,7 @@
 #include "SynthGlobals.h"
 #include "UserPrefs.h"
 #include "PatchCable.h"
+#include "QwertyToPitchMapping.h"
 
 #include "juce_audio_devices/juce_audio_devices.h"
 #include "juce_gui_basics/juce_gui_basics.h"
@@ -71,10 +72,32 @@ void UserPrefsEditor::CreateUIControls()
    UserPrefs.cable_drop_behavior.GetDropdown()->AddLabel("show quickspawn", (int)CableDropBehavior::ShowQuickspawn);
    UserPrefs.cable_drop_behavior.GetDropdown()->AddLabel("do nothing", (int)CableDropBehavior::DoNothing);
    UserPrefs.cable_drop_behavior.GetDropdown()->AddLabel("disconnect", (int)CableDropBehavior::DisconnectCable);
+
    for (int i = 0; i < UserPrefs.cable_drop_behavior.GetDropdown()->GetNumValues(); ++i)
    {
       if (UserPrefs.cable_drop_behavior.GetDropdown()->GetElement(i).mLabel == UserPrefs.cable_drop_behavior.Get())
          UserPrefs.cable_drop_behavior.GetIndex() = i;
+   }
+
+   UserPrefs.qwerty_to_pitch_mode.GetDropdown()->AddLabel("Ableton", (int)QwertyToPitchMappingMode::Ableton);
+   UserPrefs.qwerty_to_pitch_mode.GetDropdown()->AddLabel("Fruity", (int)QwertyToPitchMappingMode::Fruity);
+
+   for (int i = 0; i < UserPrefs.qwerty_to_pitch_mode.GetDropdown()->GetNumValues(); ++i)
+   {
+      if (UserPrefs.qwerty_to_pitch_mode.GetDropdown()->GetElement(i).mLabel == UserPrefs.qwerty_to_pitch_mode.Get())
+         UserPrefs.qwerty_to_pitch_mode.GetIndex() = i;
+   }
+
+   UserPrefs.minimap_corner.GetIndex() = 0;
+   UserPrefs.minimap_corner.GetDropdown()->AddLabel("Top right", (int)MinimapCorner::TopRight);
+   UserPrefs.minimap_corner.GetDropdown()->AddLabel("Top left", (int)MinimapCorner::TopLeft);
+   UserPrefs.minimap_corner.GetDropdown()->AddLabel("Bottom right", (int)MinimapCorner::BottomRight);
+   UserPrefs.minimap_corner.GetDropdown()->AddLabel("Bottom left", (int)MinimapCorner::BottomLeft);
+
+   for (int i = 0; i < UserPrefs.minimap_corner.GetDropdown()->GetNumValues(); ++i)
+   {
+      if (UserPrefs.minimap_corner.GetDropdown()->GetElement(i).mLabel == UserPrefs.minimap_corner.Get())
+         UserPrefs.minimap_corner.GetIndex() = i;
    }
 }
 
@@ -296,7 +319,7 @@ void UserPrefsEditor::DrawModule()
       ofRectangle rect = UserPrefs.audio_output_device.GetControl()->GetRect(true);
       ofPushStyle();
       ofSetColor(ofColor::white);
-      DrawTextNormal("note: " + UserPrefs.devicetype.GetDropdown()->GetLabel(UserPrefs.devicetype.GetIndex()) + " uses the same audio device for output and input", rect.x, rect.getMaxY() + 14, 13);
+      DrawTextNormal("note: " + UserPrefs.devicetype.GetDropdown()->GetLabel(UserPrefs.devicetype.GetIndex()) + " uses the same audio device for output and input", rect.x, rect.getMaxY() + 14, 11);
       ofPopStyle();
    }
 
@@ -328,6 +351,7 @@ void UserPrefsEditor::DrawModule()
 
    DrawRightLabel(UserPrefs.zoom.GetControl(), "(currently: " + ofToString(gDrawScale) + ")", ofColor::white);
    DrawRightLabel(UserPrefs.recordings_path.GetControl(), "(default: " + UserPrefs.recordings_path.GetDefault() + ")", ofColor::white);
+   DrawRightLabel(UserPrefs.samples_path.GetControl(), "(default: " + UserPrefs.samples_path.GetDefault() + ")", ofColor::white);
    DrawRightLabel(UserPrefs.tooltips.GetControl(), "(default: " + UserPrefs.tooltips.GetDefault() + ")", ofColor::white);
    DrawRightLabel(UserPrefs.layout.GetControl(), "(default: " + UserPrefs.layout.GetDefault() + ")", ofColor::white);
    DrawRightLabel(UserPrefs.youtube_dl_path.GetControl(), "(default: " + UserPrefs.youtube_dl_path.GetDefault() + ")", ofColor::white);
@@ -344,7 +368,7 @@ void UserPrefsEditor::DrawRightLabel(IUIControl* control, std::string text, ofCo
       ofRectangle rect = control->GetRect(true);
       ofPushStyle();
       ofSetColor(color);
-      DrawTextNormal(text, rect.getMaxX() + offsetX, rect.getMaxY() - 3, 13);
+      DrawTextNormal(text, rect.getMaxX() + offsetX, rect.getMaxY() - 3, 11);
       ofPopStyle();
    }
 }

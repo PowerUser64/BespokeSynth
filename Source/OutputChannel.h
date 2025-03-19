@@ -23,14 +23,13 @@
 //
 //
 
-#ifndef __modularSynth__OutputChannel__
-#define __modularSynth__OutputChannel__
+#pragma once
 
-#include <iostream>
 #include "IAudioProcessor.h"
 #include "IDrawableModule.h"
 #include "DropdownList.h"
 #include "PeakTracker.h"
+#include "LevelMeterDisplay.h"
 
 class OutputChannel : public IAudioProcessor, public IDrawableModule, public IDropdownListener
 {
@@ -75,13 +74,5 @@ private:
    int mStereoSelectionOffset{ 0 };
    float mLimit{ 1 };
 
-   struct LevelMeter
-   {
-      PeakTracker mPeakTracker;
-      PeakTracker mPeakTrackerSlow;
-   };
-
-   std::array<LevelMeter, 2> mLevelMeters;
+   LevelMeterDisplay mLevelMeterDisplay;
 };
-
-#endif /* defined(__modularSynth__OutputChannel__) */

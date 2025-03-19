@@ -25,8 +25,7 @@
   ==============================================================================
 */
 
-#ifndef MODULECONTAINER_H_INCLUDED
-#define MODULECONTAINER_H_INCLUDED
+#pragma once
 
 #include "OpenFrameworksPort.h"
 #include "IDrawableModule.h"
@@ -61,7 +60,7 @@ public:
    void MouseMoved(float x, float y);
    void MouseReleased();
    IDrawableModule* GetModuleAt(float x, float y);
-   void GetModulesWithinRect(ofRectangle rect, std::vector<IDrawableModule*>& output);
+   void GetModulesWithinRect(ofRectangle rect, std::vector<IDrawableModule*>& output, bool ignorePinned = false);
    void MoveToFront(IDrawableModule* module);
    void AddModule(IDrawableModule* module);
    void TakeModule(IDrawableModule* module);
@@ -100,5 +99,3 @@ private:
    ofVec2f mDrawOffset;
    float mDrawScale{ 1 };
 };
-
-#endif // MODULECONTAINER_H_INCLUDED

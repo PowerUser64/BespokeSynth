@@ -474,9 +474,7 @@ void HelpDisplay::ButtonClicked(ClickButton* button, double time)
    }
    if (button == mDoModuleScreenshotsButton)
    {
-      /*mScreenshotsToProcess.push_back("sampleplayer");
-      mScreenshotsToProcess.push_back("drumplayer");
-      mScreenshotsToProcess.push_back("notesequencer");*/
+      gDrawScale = 1.0f;
 
       std::vector<ModuleCategory> moduleTypes = {
          kModuleCategory_Note,
@@ -502,6 +500,11 @@ void HelpDisplay::ButtonClicked(ClickButton* button, double time)
          spawnable.mSpawnMethod = ModuleFactory::SpawnMethod::EffectChain;
          mScreenshotsToProcess.push_back(spawnable);
       }
+
+      /*mScreenshotsToProcess.clear();
+      mScreenshotsToProcess.push_back(TheSynth->GetModuleFactory()->GetSpawnableModules("sampleplayer", true)[0]);
+      mScreenshotsToProcess.push_back(TheSynth->GetModuleFactory()->GetSpawnableModules("drumplayer", true)[0]);
+      mScreenshotsToProcess.push_back(TheSynth->GetModuleFactory()->GetSpawnableModules("notesequencer", true)[0]);*/
 
       mScreenshotState = ScreenshotState::WaitingForSpawn;
    }
@@ -598,12 +601,12 @@ void HelpDisplay::RenderScreenshot(int x, int y, int width, int height, std::str
    juce::gl::glPixelStorei(juce::gl::GL_PACK_ALIGNMENT, oldAlignment);
 
    juce::Image image(juce::Image::RGB, width, height, true);
-   for (int x = 0; x < width; ++x)
+   for (int ix = 0; ix < width; ++ix)
    {
-      for (int y = 0; y < height; ++y)
+      for (int iy = 0; iy < height; ++iy)
       {
-         int pos = (x + (height - 1 - y) * width) * 3;
-         image.setPixelAt(x, y, juce::Colour(pixels[pos], pixels[pos + 1], pixels[pos + 2]));
+         int pos = (ix + (height - 1 - iy) * width) * 3;
+         image.setPixelAt(ix, iy, juce::Colour(pixels[pos], pixels[pos + 1], pixels[pos + 2]));
       }
    }
 

@@ -23,13 +23,13 @@
 //
 //
 
-#ifndef __modularSynth__DropdownList__
-#define __modularSynth__DropdownList__
+#pragma once
 
-#include <iostream>
 #include "IUIControl.h"
 #include "IDrawableModule.h"
 #include "ClickButton.h"
+#include "IPulseReceiver.h"
+#include "PatchCableSource.h"
 
 struct DropdownListElement
 {
@@ -98,7 +98,7 @@ enum class DropdownDisplayStyle
    kHamburger
 };
 
-class DropdownList : public IUIControl
+class DropdownList : public IUIControl, public IPulseReceiver
 {
 public:
    DropdownList(IDropdownListener* owner, const char* name, int x, int y, int* var, float width = -1);
@@ -151,10 +151,14 @@ public:
    bool InvertScrollDirection() override { return true; }
    void Increment(float amount) override;
    void Poll() override;
+   bool CanBeTargetedBy(PatchCableSource* source) const override;
    void SaveState(FileStreamOut& out) override;
    void LoadState(FileStreamIn& in, bool shouldSetValue = true) override;
 
    void GetDimensions(float& width, float& height) override;
+
+   //IPulseReceiver
+   void OnPulse(double time, float velocity, int flags) override;
 
    static constexpr int kItemSpacing = 15;
    static constexpr int kPageBarSpacing = 20;
@@ -192,5 +196,3 @@ private:
    std::vector<int> mSeparators;
    DropdownDisplayStyle mDisplayStyle{ DropdownDisplayStyle::kNormal };
 };
-
-#endif /* defined(__modularSynth__DropdownList__) */

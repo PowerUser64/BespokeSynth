@@ -23,8 +23,7 @@
 //
 //
 
-#ifndef __Bespoke__ScaleDegree__
-#define __Bespoke__ScaleDegree__
+#pragma once
 
 #include "NoteEffectBase.h"
 #include "IDrawableModule.h"
@@ -45,7 +44,7 @@ public:
    void SetEnabled(bool enabled) override { mEnabled = enabled; }
 
    //INoteReceiver
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
 
    void CheckboxUpdated(Checkbox* checkbox, double time) override;
    void DropdownUpdated(DropdownList* list, int oldVal, double time) override;
@@ -84,5 +83,3 @@ private:
    Checkbox* mDiatonicCheckbox{ nullptr };
    bool mDiatonic{ true };
 };
-
-#endif /* defined(__Bespoke__ScaleDegree__) */

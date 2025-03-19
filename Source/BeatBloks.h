@@ -23,10 +23,8 @@
 //
 //
 
-#ifndef __modularSynth__BeatBloks__
-#define __modularSynth__BeatBloks__
+#pragma once
 
-#include <iostream>
 #include "IAudioSource.h"
 #include "EnvOscillator.h"
 #include "INoteReceiver.h"
@@ -56,7 +54,7 @@ public:
    void CreateUIControls() override;
 
    //INoteReceiver
-   void PlayNote(double time, int pitch, int velocity, int voiceIdx = -1, ModulationParameters modulation = ModulationParameters()) override;
+   void PlayNote(NoteMessage note) override;
    void SendCC(int control, int value, int voiceIdx = -1) override {}
 
    //IAudioSource
@@ -204,5 +202,3 @@ private:
 
    int mLastRemovedRemixBlokIdx{ -1 };
 };
-
-#endif /* defined(__modularSynth__BeatBloks__) */
