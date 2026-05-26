@@ -37,6 +37,9 @@ Release/Bespoke.app/*
 *.out
 *.app
 
+# gdb output
+.gdb_history
+
 ## Build generated
 DerivedData/
 
