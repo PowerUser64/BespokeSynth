@@ -554,3 +554,5 @@ void FFTData::Clear()
    std::memset(mImaginaryValues, 0, mFreqDomainSize * sizeof(float));
    std::memset(mTimeDomain, 0, mWindowSize * sizeof(float));
 }
+
+#undef REAL
