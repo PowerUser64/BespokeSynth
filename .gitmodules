@@ -23,3 +23,6 @@
 	path = libs/exprtk
 	url = https://github.com/ArashPartow/exprtk.git
 	branch = cmake
+[submodule "libs/faust"]
+	path = libs/faust
+	url = https://github.com/grame-cncm/faust
