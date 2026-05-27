@@ -79,4 +79,6 @@ struct FFTData
 void mayer_realfft(int n, REAL* real);
 void mayer_realifft(int n, REAL* real);
 
+#undef REAL
+
 #endif
