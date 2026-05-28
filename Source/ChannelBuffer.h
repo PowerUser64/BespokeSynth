@@ -29,19 +29,15 @@
 #include "SynthGlobals.h"
 #include "FileStream.h"
 
-// forward declaration
-typedef class FaustConnector FaustConnector;
-
 class ChannelBuffer
 {
 public:
-   friend FaustConnector; // FaustConnector needs direct access to buffers
-
    ChannelBuffer(int bufferSize);
    ChannelBuffer(float* data, int bufferSize); //intended as a temporary holder for passing raw data to methods that want a ChannelBuffer
    ~ChannelBuffer();
 
    float* GetChannel(int channel);
+   float** GetAllChannels();
 
    void Clear() const;
 
