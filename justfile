@@ -122,6 +122,20 @@ run *command_prefix:
    echo_do "$@" "$bespoke_exe"
 
 
+# Compile all `.dsp` in Source/faust/
+faustc:
+   #!/bin/sh
+   {{echo_do}}
+
+   cd Source/faust
+   for f in *.dsp; do
+      newf="${f%%.*}.hpp"
+      if ! [ -f "$newf" ]; then
+         echo_do faust "$f" > "$newf"
+      fi
+   done
+
+
 # Clean the build files
 clean:
    rm -r ignore/build
