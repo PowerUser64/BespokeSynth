@@ -23,15 +23,24 @@
 #pragma once
 
 #include "IAudioProcessor.h"
+#include "IAudioReceiver.h"
 #include "IDrawableModule.h"
 #include "Slider.h"
+#include <array>
 
 #include "dsp.h"
 #include "UI.h"
 #include "meta.h"
 
 // NOTE: this include controls what faust module gets compiled:
-#include "faust/sine-advanced.hpp"
+#include "faust/sine-advanced-stereo.hpp"
+
+// TODO(Blake):
+// This define exists because we need an array of pointers to channels for
+// faust to process, and for memory management reasons, it's nice for its size
+// to be known at compile time.
+// TODO: check that the number of channels in the faust program is less than FAUST_MAX_CHANNELS
+#define FAUST_MAX_CHANNELS 2
 
 class FaustConnector : public IAudioProcessor, public IDrawableModule
 {
@@ -45,7 +54,7 @@ public:
    static IDrawableModule* Create();
 
    // UI
-   // TODO(Blake):
+   // TODO(UI):
    // void CreateUIControls() override;
 
    // Process
@@ -56,9 +65,13 @@ public:
 private:
    void DrawModule() override;
 
+   IAudioReceiver* target_previous = 0;
+   std::array<float*, FAUST_MAX_CHANNELS> in_chs = { 0 };
+   std::array<float*, FAUST_MAX_CHANNELS> out_chs = { 0 };
+
    mydsp mDsp;
 
    void SetMetadataFromDSP();
 
-   // IDEA(Blake): vector<FloatSlider>? (or similar)
+   // IDEA(UI): vector<FloatSlider>? (or similar)
 };
