@@ -125,10 +125,7 @@ void FaustConnector::Process(double time)
    {
       int last_ch = MIN(mDsp.getNumOutputs(), MIN(FAUST_MAX_CHANNELS, target->GetBuffer()->NumActiveChannels()));
 
-      // TODO(Blake): this allocates every frame, but without it, gWorkChannelBuffer is not usable
-      gWorkChannelBuffer.SetMaxAllowedChannels(last_ch);
       gWorkChannelBuffer.SetNumActiveChannels(last_ch);
-      gWorkChannelBuffer.Resize(target->GetBuffer()->BufferSize());
 
       for (int ch = 0; ch < last_ch; ++ch)
       {
@@ -148,11 +145,10 @@ void FaustConnector::Process(double time)
 
    for (int ch = 0; ch < gWorkChannelBuffer.NumActiveChannels(); ++ch)
    {
-      Add(target->GetBuffer()->GetChannel(ch), gWorkChannelBuffer.GetChannel(ch), gWorkChannelBuffer.BufferSize());
-      GetVizBuffer()->WriteChunk(gWorkChannelBuffer.GetChannel(ch), gWorkChannelBuffer.BufferSize(), ch);
+      Add(target->GetBuffer()->GetChannel(ch), gWorkChannelBuffer.GetChannel(ch), GetBuffer()->BufferSize());
+      GetVizBuffer()->WriteChunk(gWorkChannelBuffer.GetChannel(ch), GetBuffer()->BufferSize(), ch);
    }
 
-   gWorkChannelBuffer.Reset();
    GetBuffer()->Reset();
 }
 
