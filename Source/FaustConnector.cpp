@@ -96,7 +96,7 @@ void FaustConnector::Process(double time)
    // TODO: do more of this at module creation and/or use a dirty flag to mark it for updates here
    if (mDsp.getNumInputs() == 0 || GetBuffer()->NumActiveChannels() == 0)
    {
-      in_chs = { gZeroBuffer, gZeroBuffer };
+      mInChannels = { gZeroBuffer, gZeroBuffer };
    }
    else
    {
@@ -111,17 +111,16 @@ void FaustConnector::Process(double time)
       int last_ch = MIN(FAUST_MAX_CHANNELS, GetBuffer()->NumActiveChannels());
       int ch = 0;
       for (; ch < last_ch; ++ch)
-         in_chs[ch] = GetBuffer()->GetChannel(ch);
+         mInChannels[ch] = GetBuffer()->GetChannel(ch);
 
       int last_dsp_ch = MIN(FAUST_MAX_CHANNELS, mDsp.getNumInputs());
       if (last_ch < last_dsp_ch)
          for (; ch < last_dsp_ch; ++ch)
-            in_chs[ch] = gZeroBuffer;
+            mInChannels[ch] = gZeroBuffer;
 #endif
    }
 
 
-   // if (target != target_previous)
    {
       int last_ch = MIN(mDsp.getNumOutputs(), MIN(FAUST_MAX_CHANNELS, target->GetBuffer()->NumActiveChannels()));
 
@@ -129,7 +128,7 @@ void FaustConnector::Process(double time)
 
       for (int ch = 0; ch < last_ch; ++ch)
       {
-         out_chs[ch] = gWorkChannelBuffer.GetChannel(ch);
+         mOutChannels[ch] = gWorkChannelBuffer.GetChannel(ch);
       }
 
       {
@@ -138,10 +137,9 @@ void FaustConnector::Process(double time)
          if (target->GetBuffer()->NumActiveChannels() != mDsp.getNumOutputs())
             return;
       }
-      target_previous = target;
    }
 
-   mDsp.compute(gBufferSize, in_chs.begin(), out_chs.begin());
+   mDsp.compute(gBufferSize, mInChannels.begin(), mOutChannels.begin());
 
    for (int ch = 0; ch < gWorkChannelBuffer.NumActiveChannels(); ++ch)
    {

@@ -65,9 +65,8 @@ public:
 private:
    void DrawModule() override;
 
-   IAudioReceiver* target_previous = 0;
-   std::array<float*, FAUST_MAX_CHANNELS> in_chs = { 0 };
-   std::array<float*, FAUST_MAX_CHANNELS> out_chs = { 0 };
+   std::array<float*, FAUST_MAX_CHANNELS> mInChannels = { 0 };
+   std::array<float*, FAUST_MAX_CHANNELS> mOutChannels = { 0 };
 
    mydsp mDsp;
 
