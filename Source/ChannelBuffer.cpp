@@ -83,12 +83,6 @@ float* ChannelBuffer::GetChannel(int channel)
    return ret;
 }
 
-float** ChannelBuffer::GetAllChannels()
-{
-   return mBuffers;
-}
-
-
 void ChannelBuffer::Clear() const
 {
    for (int i = 0; i < mNumChannels; ++i)

@@ -37,7 +37,6 @@ public:
    ~ChannelBuffer();
 
    float* GetChannel(int channel);
-   float** GetAllChannels();
 
    void Clear() const;
 
