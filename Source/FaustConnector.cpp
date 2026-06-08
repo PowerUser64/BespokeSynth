@@ -132,8 +132,6 @@ void FaustConnector::Process(double time)
       }
 
       {
-         if (*target->GetBuffer()->GetAllChannels() == nullptr)
-            return;
          if (target->GetBuffer()->NumActiveChannels() != mDsp.getNumOutputs())
             return;
       }
