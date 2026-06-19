@@ -85,14 +85,6 @@ void FaustConnector::Process(double time)
    int buf_count = MAX(mDsp.getNumInputs(), mDsp.getNumOutputs());
    SyncBuffers(buf_count);
 
-   //  [x]   if input is null                                    -> always pass in the zero buffer
-   //  [x]   if input.channel_count >= dsp.input_channel_count   -> pass in what we have to dsp
-   //  [x]   if input.channel_count <  dsp.input_channel_count   -> pass in what we have to dsp
-   //
-   //  [x]   if output is null                                   -> skip processing
-   //  [x]   if output.channel_count >= dsp.output_channel_count -> pass what we have to dsp
-   //  [x]   if output.channel_count <  dsp.output_channel_count -> skip processing (?)
-
    // TODO: do more of this at module creation and/or use a dirty flag to mark it for updates here
    if (mDsp.getNumInputs() == 0 || GetBuffer()->NumActiveChannels() == 0)
    {
@@ -100,24 +92,16 @@ void FaustConnector::Process(double time)
    }
    else
    {
-      // enable to tile a low input channel count over the entire input range
-#if false
-      int last_ch = MIN(FAUST_MAX_CHANNELS, GetBuffer()->NumActiveChannels());
-      for (int tch = 0; tch < MIN(FAUST_MAX_CHANNELS, mDsp.getNumInputs());)
-         for (int ch = 0; ch < last_ch; ++ch, ++tch)
-            in_chs[tch] = GetBuffer()->GetChannel(ch);
-#else
       // enable to use the zero buffer for remaining mismatched channels
-      int last_ch = MIN(FAUST_MAX_CHANNELS, GetBuffer()->NumActiveChannels());
-      int ch = 0;
-      for (; ch < last_ch; ++ch)
-         mInChannels[ch] = GetBuffer()->GetChannel(ch);
-
+      int last_bespoke_ch = MIN(FAUST_MAX_CHANNELS, GetBuffer()->NumActiveChannels());
       int last_dsp_ch = MIN(FAUST_MAX_CHANNELS, mDsp.getNumInputs());
-      if (last_ch < last_dsp_ch)
-         for (; ch < last_dsp_ch; ++ch)
+      for (int ch = 0; ch < last_bespoke_ch; ++ch)
+      {
+         if (ch < last_dsp_ch)
+            mInChannels[ch] = GetBuffer()->GetChannel(ch);
+         else
             mInChannels[ch] = gZeroBuffer;
-#endif
+      }
    }
 
 
