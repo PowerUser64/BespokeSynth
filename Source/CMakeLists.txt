@@ -196,6 +196,8 @@ target_sources(BespokeSynth PRIVATE
     EventCanvas.h
     FaustConnector.cpp
     FaustConnector.h
+    FaustUI.cpp
+    FaustUI.h
     FFT.cpp
     FFT.h
     FFTtoAdditive.cpp

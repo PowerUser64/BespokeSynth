@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------
-name: "sine-advanced"
+name: "sine-advanced-stereo-params"
 Code generated with Faust 2.85.5 (https://faust.grame.fr)
 Compilation options: -lang cpp -fpga-mem-th 4 -ct 1 -es 1 -mcd 16 -mdd 1024 -mdy 33 -single -ftz 0
 ------------------------------------------------------------ */
@@ -80,6 +80,7 @@ class mydsp : public dsp {
  private:
 	
 	int iVec1[2];
+	FAUSTFLOAT fHslider0;
 	int fSampleRate;
 	float fConst0;
 	float fRec1[2];
@@ -98,13 +99,13 @@ class mydsp : public dsp {
 		m->declare("basics.lib/name", "Faust Basic Element Library");
 		m->declare("basics.lib/version", "1.22.0");
 		m->declare("compile_options", "-lang cpp -fpga-mem-th 4 -ct 1 -es 1 -mcd 16 -mdd 1024 -mdy 33 -single -ftz 0");
-		m->declare("filename", "sine-advanced.dsp");
+		m->declare("filename", "sine-advanced-stereo-params.dsp");
 		m->declare("maths.lib/author", "GRAME");
 		m->declare("maths.lib/copyright", "GRAME");
 		m->declare("maths.lib/license", "LGPL with exception");
 		m->declare("maths.lib/name", "Faust Math Library");
 		m->declare("maths.lib/version", "2.9.0");
-		m->declare("name", "sine-advanced");
+		m->declare("name", "sine-advanced-stereo-params");
 		m->declare("oscillators.lib/name", "Faust Oscillator Library");
 		m->declare("oscillators.lib/version", "1.7.0");
 		m->declare("platform.lib/name", "Generic Platform Library");
@@ -112,10 +113,10 @@ class mydsp : public dsp {
 	}
 
 	virtual int getNumInputs() {
-		return 1;
+		return 2;
 	}
 	virtual int getNumOutputs() {
-		return 1;
+		return 2;
 	}
 	
 	static void classInit(int sample_rate) {
@@ -127,10 +128,11 @@ class mydsp : public dsp {
 	
 	virtual void instanceConstants(int sample_rate) {
 		fSampleRate = sample_rate;
-		fConst0 = 2.2e+02f / std::min<float>(1.92e+05f, std::max<float>(1.0f, static_cast<float>(fSampleRate)));
+		fConst0 = 1.0f / std::min<float>(1.92e+05f, std::max<float>(1.0f, static_cast<float>(fSampleRate)));
 	}
 	
 	virtual void instanceResetUserInterface() {
+		fHslider0 = static_cast<FAUSTFLOAT>(2.2e+02f);
 	}
 	
 	virtual void instanceClear() {
@@ -162,18 +164,24 @@ class mydsp : public dsp {
 	}
 	
 	virtual void buildUserInterface(UI* ui_interface) {
-		ui_interface->openVerticalBox("sine-advanced");
+		ui_interface->openVerticalBox("sine-advanced-stereo-params");
+		ui_interface->addHorizontalSlider("freq", &fHslider0, FAUSTFLOAT(2.2e+02f), FAUSTFLOAT(55.0f), FAUSTFLOAT(8.8e+02f), FAUSTFLOAT(0.01f));
 		ui_interface->closeBox();
 	}
 	
 	virtual void compute(int count, FAUSTFLOAT** RESTRICT inputs, FAUSTFLOAT** RESTRICT outputs) {
 		FAUSTFLOAT* input0 = inputs[0];
+		FAUSTFLOAT* input1 = inputs[1];
 		FAUSTFLOAT* output0 = outputs[0];
+		FAUSTFLOAT* output1 = outputs[1];
+		float fSlow0 = fConst0 * static_cast<float>(fHslider0);
 		for (int i0 = 0; i0 < count; i0 = i0 + 1) {
 			iVec1[0] = 1;
-			float fTemp0 = ((1 - iVec1[1]) ? 0.0f : fConst0 + fRec1[1]);
+			float fTemp0 = ((1 - iVec1[1]) ? 0.0f : fSlow0 + fRec1[1]);
 			fRec1[0] = fTemp0 - std::floor(fTemp0);
-			output0[i0] = static_cast<FAUSTFLOAT>(0.5f * (static_cast<float>(input0[i0]) + 1.0f) * ftbl0mydspSIG0[std::max<int>(0, std::min<int>(static_cast<int>(65536.0f * fRec1[0]), 65535))]);
+			float fTemp1 = ftbl0mydspSIG0[std::max<int>(0, std::min<int>(static_cast<int>(65536.0f * fRec1[0]), 65535))];
+			output0[i0] = static_cast<FAUSTFLOAT>(0.5f * (static_cast<float>(input0[i0]) + 1.0f) * fTemp1);
+			output1[i0] = static_cast<FAUSTFLOAT>(0.5f * (static_cast<float>(input1[i0]) + 1.0f) * fTemp1);
 			iVec1[1] = iVec1[0];
 			fRec1[1] = fRec1[0];
 		}
