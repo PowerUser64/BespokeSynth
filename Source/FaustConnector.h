@@ -25,24 +25,27 @@
 #include "IAudioProcessor.h"
 #include "IAudioReceiver.h"
 #include "IDrawableModule.h"
+#include "IDrawableModule.h"
+#include "FaustUI.h"
 #include "Slider.h"
 #include <array>
 
+// Faust includes (not directly used, TODO: figure out how to include these in the compiled program)
 #include "dsp.h"
 #include "UI.h"
 #include "meta.h"
 
 // NOTE: this include controls what faust module gets compiled:
-#include "faust/sine-advanced-stereo.hpp"
+#include "faust/sine-advanced-stereo-params.hpp"
 
 // TODO(Blake):
 // This define exists because we need an array of pointers to channels for
 // faust to process, and for memory management reasons, it's nice for its size
 // to be known at compile time.
-// TODO: check that the number of channels in the faust program is less than FAUST_MAX_CHANNELS
+// TODO: check that the number of channels in the faust program is less than FAUST_MAX_CHANNELS (at compile time, in cmake)
 #define FAUST_MAX_CHANNELS 2
 
-class FaustConnector : public IAudioProcessor, public IDrawableModule
+class FaustConnector : public IAudioProcessor, public IDrawableModule, public IFloatSliderListener
 {
 public:
    // Module interface
@@ -54,8 +57,9 @@ public:
    static IDrawableModule* Create();
 
    // UI
-   // TODO(UI):
-   // void CreateUIControls() override;
+   void CreateUIControls() override;
+   void FloatSliderUpdated(FloatSlider* slider, float oldVal, double time) override { };
+   void DrawModule() override;
 
    // Process
    void Process(double time) override;
@@ -63,14 +67,11 @@ public:
    bool IsEnabled() const override;
 
 private:
-   void DrawModule() override;
-
    std::array<float*, FAUST_MAX_CHANNELS> mInChannels = { 0 };
    std::array<float*, FAUST_MAX_CHANNELS> mOutChannels = { 0 };
 
    mydsp mDsp;
+   FaustUI mDspUi;
 
    void SetMetadataFromDSP();
-
-   // IDEA(UI): vector<FloatSlider>? (or similar)
 };

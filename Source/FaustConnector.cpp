@@ -33,14 +33,29 @@ FaustConnector::~FaustConnector() { };
 FaustConnector::FaustConnector()
 : IAudioProcessor(gBufferSize)
 , IDrawableModule(120, 40)
+, mDspUi(this)
 {
    // TODO(Blake): Should we use init or instanceInit? We want to be able to spawn multiple of the module.
    mDsp.init(gSampleRate);
 }
 
+// TODO(Blake): Faust modules need to be initialized before we can say how much IO they have
+bool FaustConnector::AcceptsAudio() { return true; }
+bool FaustConnector::AcceptsNotes() { return false; }
+bool FaustConnector::AcceptsPulses() { return false; }
+
 IDrawableModule* FaustConnector::Create()
 {
-   return new FaustConnector();
+   FaustConnector* ret = new FaustConnector();
+   assert(ret->mDsp.getNumOutputs() <= FAUST_MAX_CHANNELS);
+   assert(ret->mDsp.getNumInputs() <= FAUST_MAX_CHANNELS);
+   return ret;
+}
+
+void FaustConnector::CreateUIControls()
+{
+   IDrawableModule::CreateUIControls();
+   mDsp.buildUserInterface(&mDspUi);
 }
 
 bool FaustConnector::IsEnabled() const
@@ -48,10 +63,13 @@ bool FaustConnector::IsEnabled() const
    return mEnabled;
 }
 
-// TODO(Blake): Faust modules need to be initialized before we can say how much IO they have
-bool FaustConnector::AcceptsAudio() { return true; }
-bool FaustConnector::AcceptsNotes() { return false; }
-bool FaustConnector::AcceptsPulses() { return false; }
+void FaustConnector::DrawModule()
+{
+   if (Minimized() || IsVisible() == false)
+      return;
+
+   mDspUi.DrawControls();
+}
 
 // TODO(Blake): what to do with time parameter?
 void FaustConnector::Process(double time)
@@ -85,7 +103,6 @@ void FaustConnector::Process(double time)
    int buf_count = MAX(mDsp.getNumInputs(), mDsp.getNumOutputs());
    SyncBuffers(buf_count);
 
-   // TODO: do more of this at module creation and/or use a dirty flag to mark it for updates here
    if (mDsp.getNumInputs() == 0 || GetBuffer()->NumActiveChannels() == 0)
    {
       mInChannels = { gZeroBuffer, gZeroBuffer };
@@ -93,11 +110,11 @@ void FaustConnector::Process(double time)
    else
    {
       // enable to use the zero buffer for remaining mismatched channels
-      int last_bespoke_ch = MIN(FAUST_MAX_CHANNELS, GetBuffer()->NumActiveChannels());
+      int last_module_ch = MIN(FAUST_MAX_CHANNELS, GetBuffer()->NumActiveChannels());
       int last_dsp_ch = MIN(FAUST_MAX_CHANNELS, mDsp.getNumInputs());
-      for (int ch = 0; ch < last_bespoke_ch; ++ch)
+      for (int ch = 0; ch < last_dsp_ch; ++ch)
       {
-         if (ch < last_dsp_ch)
+         if (ch < last_module_ch)
             mInChannels[ch] = GetBuffer()->GetChannel(ch);
          else
             mInChannels[ch] = gZeroBuffer;
@@ -136,5 +153,3 @@ void FaustConnector::SetEnabled(bool enabled)
 {
    mEnabled = enabled;
 }
-
-void FaustConnector::DrawModule() { }

@@ -130,9 +130,7 @@ faustc:
    cd Source/faust
    for f in *.dsp; do
       newf="${f%%.*}.hpp"
-      if ! [ -f "$newf" ]; then
-         echo_do faust "$f" > "$newf"
-      fi
+      echo_do faust "$f" > "$newf"
    done
 
 
