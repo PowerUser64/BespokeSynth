@@ -21,33 +21,70 @@
 //
 
 #include "FaustUI.h"
+#include "Checkbox.h"
+#include "ClickButton.h"
+#include "IDrawableModule.h"
+#include "IUIControl.h"
 #include "Slider.h"
 
+/** TODO:
+ * - slider quantization (int)
+ * - slider curve approximation
+ * - unit names?
+ */
+
 // parent should be the "this" pointer for the module that will update the sliders
-FaustUI::FaustUI(IFloatSliderListener* parent)
+FaustUI::FaustUI(IFloatSliderListener* parentFloatSliderListener, IDrawableModule* parentDrawableModule)
+: mParentFloatSliderListner(parentFloatSliderListener)
+, mParentDrawableModule(parentDrawableModule)
 {
-   mFloatsliderParent = parent;
 }
 
 void FaustUI::DrawControls()
 {
-   for (auto& control : mSliders)
+   for (auto& control : mControls)
       control->Draw();
+}
+
+void FaustUI::UpdateCursorPos(int x, int y)
+{
+   x += mElementPaddingX;
+   y += mElementPaddingY;
+
+   // TODO: support horizontal layouts here
+   mCursorY += y;
+   mModuleSizeY += y;
+   mModuleSizeX = MAX(mModuleSizeX, x + mElementPaddingX);
+
+   mParentDrawableModule->Resize(mModuleSizeX, mModuleSizeY);
 }
 
 // -- active widgets
 
-void FaustUI::addButton(const char* label, float* zone) { }
-void FaustUI::addCheckButton(const char* label, float* zone) { }
-void FaustUI::addVerticalSlider(const char* label, float* zone, float init, float min, float max, float step) { addHorizontalSlider(label, zone, init, min, max, step); }
+void FaustUI::addButton(const char* label, float* zone)
+{
+   // TODO(Blake): Requires event handling
+}
+
+void FaustUI::addCheckButton(const char* label, float* zone)
+{
+   // TODO(Blake): Requires storing bools that correspond to each zone and updating the floats each frame
+   // QUESTION: can we implement IDrawableModule::CheckboxUpdated() for the parent?
+}
+void FaustUI::addVerticalSlider(const char* label, float* zone, float init, float min, float max, float step)
+{
+   // redirect to hslider
+   addHorizontalSlider(label, zone, init, min, max, step);
+}
 void FaustUI::addHorizontalSlider(const char* label, float* zone, float init, float min, float max, float step)
 {
-   FloatSlider* s = new FloatSlider(mFloatsliderParent, label, mCursorX, mCursorY, 100, 15, zone, min, max);
-   mSliders.push_back(s);
-   mCursorX += mSliderWidth;
-   mCursorY += mSliderHeight;
+   mControls.push_back(new FloatSlider(mParentFloatSliderListner, label, mCursorX, mCursorY, mSliderWidth, mSliderHeight, zone, min, max));
+   UpdateCursorPos(mSliderWidth, mSliderHeight);
 }
-void FaustUI::addNumEntry(const char* label, float* zone, float init, float min, float max, float step) { }
+void FaustUI::addNumEntry(const char* label, float* zone, float init, float min, float max, float step)
+{
+   // TODO(Blake): Requires storing TextEntry fields
+}
 
 // -- passive widgets
 

@@ -21,6 +21,9 @@
 //
 
 #include <vector>
+#include "Checkbox.h"
+#include "ClickButton.h"
+#include "IDrawableModule.h"
 #include "Slider.h"
 #include "faust/gui/UI.h"
 
@@ -32,11 +35,14 @@
 class FaustUI : public UI
 {
 public:
-   FaustUI(IFloatSliderListener*);
+   // TODO: can this be just a single parameter?
+   FaustUI(IFloatSliderListener* parentfloatslider, IDrawableModule* parentDrawableModule);
 
    // if a module wanted to control the drawing of its controls,
    // we would make a method for fetching the list of controls
    void DrawControls();
+
+   void UpdateCursorPos(int x, int y);
 
    // -- widget layouts
 
@@ -63,13 +69,24 @@ public:
    void addSoundfile(const char* label, const char* filename, Soundfile** sf_zone) override { }
 
 private:
-   std::vector<FloatSlider*> mSliders;
+   std::vector<IUIControl*> mControls;
 
-   int mCursorX = 5;
-   int mCursorY = 5;
+   int mRowWidth = 100;
+   int mRowHeight = 15;
 
    const int mSliderHeight = 15;
    const int mSliderWidth = 100;
 
-   IFloatSliderListener* mFloatsliderParent;
+   const int mElementPaddingX = 5;
+   const int mElementPaddingY = 2;
+
+   // the "cursor" is where we'll place the next element
+   int mCursorX = mElementPaddingX;
+   int mCursorY = mElementPaddingY;
+
+   int mModuleSizeX = 100;
+   int mModuleSizeY = 5;
+
+   IFloatSliderListener* mParentFloatSliderListner;
+   IDrawableModule* mParentDrawableModule;
 };
