@@ -36,7 +36,7 @@
 #include "meta.h"
 
 // NOTE: this include controls what faust module gets compiled:
-#include "faust/sine-advanced-stereo-params.hpp"
+#include "faust/add-params.hpp"
 
 // TODO(Blake):
 // This define exists because we need an array of pointers to channels for

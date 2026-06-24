@@ -33,7 +33,7 @@ FaustConnector::~FaustConnector() { };
 FaustConnector::FaustConnector()
 : IAudioProcessor(gBufferSize)
 , IDrawableModule(120, 40)
-, mDspUi(this)
+, mDspUi(this, this)
 {
    // TODO(Blake): Should we use init or instanceInit? We want to be able to spawn multiple of the module.
    mDsp.init(gSampleRate);
