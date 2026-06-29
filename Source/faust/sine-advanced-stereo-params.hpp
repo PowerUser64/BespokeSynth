@@ -180,8 +180,8 @@ class mydsp : public dsp {
 			float fTemp0 = ((1 - iVec1[1]) ? 0.0f : fSlow0 + fRec1[1]);
 			fRec1[0] = fTemp0 - std::floor(fTemp0);
 			float fTemp1 = ftbl0mydspSIG0[std::max<int>(0, std::min<int>(static_cast<int>(65536.0f * fRec1[0]), 65535))];
-			output0[i0] = static_cast<FAUSTFLOAT>(0.5f * (static_cast<float>(input0[i0]) + 1.0f) * fTemp1);
-			output1[i0] = static_cast<FAUSTFLOAT>(0.5f * (static_cast<float>(input1[i0]) + 1.0f) * fTemp1);
+			output0[i0] = static_cast<FAUSTFLOAT>(0.25f * (static_cast<float>(input0[i0]) + 1.0f) * fTemp1);
+			output1[i0] = static_cast<FAUSTFLOAT>(0.25f * (static_cast<float>(input1[i0]) + 1.0f) * fTemp1);
 			iVec1[1] = iVec1[0];
 			fRec1[1] = fRec1[0];
 		}

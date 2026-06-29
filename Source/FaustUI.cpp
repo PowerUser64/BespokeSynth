@@ -26,6 +26,7 @@
 #include "IDrawableModule.h"
 #include "IUIControl.h"
 #include "Slider.h"
+#include "TextEntry.h"
 
 /** TODO:
  * - slider quantization (int)
@@ -34,16 +35,35 @@
  */
 
 // parent should be the "this" pointer for the module that will update the sliders
-FaustUI::FaustUI(IFloatSliderListener* parentFloatSliderListener, IDrawableModule* parentDrawableModule)
-: mParentFloatSliderListner(parentFloatSliderListener)
-, mParentDrawableModule(parentDrawableModule)
+FaustUI::FaustUI(IFloatSliderListener* parentFloatSliderListener, IDrawableModule* parentDrawableModule, ITextEntryListener* parentTextEntryListener)
+: mParentDrawableModule(parentDrawableModule)
+, mParentFloatSliderListner(parentFloatSliderListener)
+, mParentTextEntryListener(parentTextEntryListener)
 {
 }
 
-void FaustUI::DrawControls()
+void FaustUI::Impl_DrawControls()
 {
    for (auto& control : mControls)
       control->Draw();
+}
+
+void FaustUI::Impl_CheckboxUpdate(Checkbox* checkbox, double time)
+{
+   for (int i = 0; i < mCheckboxes.size(); ++i)
+   {
+      if (checkbox == mCheckboxes[i])
+      {
+         if (*mCheckboxBools[i])
+            *mCheckboxFloats[i] = 1.0f;
+         else
+            *mCheckboxFloats[i] = 0.0f;
+      }
+   }
+}
+
+void FaustUI::Impl_TextEntryComplete(TextEntry* entry)
+{
 }
 
 void FaustUI::UpdateCursorPos(int x, int y)
@@ -63,13 +83,22 @@ void FaustUI::UpdateCursorPos(int x, int y)
 
 void FaustUI::addButton(const char* label, float* zone)
 {
-   // TODO(Blake): Requires event handling
+   // buttons in bespoke are events, but faust doesn't have any notion of an
+   addCheckButton(label, zone);
 }
 
 void FaustUI::addCheckButton(const char* label, float* zone)
 {
-   // TODO(Blake): Requires storing bools that correspond to each zone and updating the floats each frame
-   // QUESTION: can we implement IDrawableModule::CheckboxUpdated() for the parent?
+   bool* checkboxBool = new bool(false);
+   Checkbox* checkbox = new Checkbox(mParentDrawableModule, label, mCursorX, mCursorY, checkboxBool);
+
+   mCheckboxFloats.push_back(zone);
+   mCheckboxBools.push_back(checkboxBool);
+
+   mCheckboxes.push_back(checkbox);
+   mControls.push_back(checkbox);
+
+   UpdateCursorPos(mCheckboxSizeX, mCheckboxSizeY);
 }
 void FaustUI::addVerticalSlider(const char* label, float* zone, float init, float min, float max, float step)
 {
@@ -78,12 +107,17 @@ void FaustUI::addVerticalSlider(const char* label, float* zone, float init, floa
 }
 void FaustUI::addHorizontalSlider(const char* label, float* zone, float init, float min, float max, float step)
 {
-   mControls.push_back(new FloatSlider(mParentFloatSliderListner, label, mCursorX, mCursorY, mSliderWidth, mSliderHeight, zone, min, max));
-   UpdateCursorPos(mSliderWidth, mSliderHeight);
+   mControls.push_back(new FloatSlider(mParentFloatSliderListner, label, mCursorX, mCursorY, mSliderSizeX, mSliderSizeY, zone, min, max));
+   UpdateCursorPos(mSliderSizeX, mSliderSizeY);
 }
 void FaustUI::addNumEntry(const char* label, float* zone, float init, float min, float max, float step)
 {
-   // TODO(Blake): Requires storing TextEntry fields
+   TextEntry* textentry = new TextEntry(mParentTextEntryListener, label, mCursorX, mCursorY, 5, zone, min, max);
+
+   mTextEntries.push_back(textentry);
+   mControls.push_back(textentry);
+
+   UpdateCursorPos(mTextEntrySizeX, mTextEntrySizeY);
 }
 
 // -- passive widgets
