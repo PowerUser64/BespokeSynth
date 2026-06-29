@@ -23,8 +23,8 @@
 #pragma once
 
 #include "IAudioProcessor.h"
+#include "TextEntry.h"
 #include "IAudioReceiver.h"
-#include "IDrawableModule.h"
 #include "IDrawableModule.h"
 #include "FaustUI.h"
 #include "Slider.h"
@@ -36,7 +36,7 @@
 #include "meta.h"
 
 // NOTE: this include controls what faust module gets compiled:
-#include "faust/add-params.hpp"
+#include "faust/all-ui-elements.hpp"
 
 // TODO(Blake):
 // This define exists because we need an array of pointers to channels for
@@ -45,7 +45,7 @@
 // TODO: check that the number of channels in the faust program is less than FAUST_MAX_CHANNELS (at compile time, in cmake)
 #define FAUST_MAX_CHANNELS 2
 
-class FaustConnector : public IAudioProcessor, public IDrawableModule, public IFloatSliderListener
+class FaustConnector : public IAudioProcessor, public IDrawableModule, public ITextEntryListener, public IFloatSliderListener
 {
 public:
    // Module interface
@@ -60,6 +60,8 @@ public:
    void CreateUIControls() override;
    void FloatSliderUpdated(FloatSlider* slider, float oldVal, double time) override { };
    void DrawModule() override;
+   void CheckboxUpdated(Checkbox* checkbox, double time) override;
+   void TextEntryComplete(TextEntry* entry) override;
 
    // Process
    void Process(double time) override;

@@ -33,7 +33,7 @@ FaustConnector::~FaustConnector() { };
 FaustConnector::FaustConnector()
 : IAudioProcessor(gBufferSize)
 , IDrawableModule(120, 40)
-, mDspUi(this, this)
+, mDspUi(this, this, this)
 {
    // TODO(Blake): Should we use init or instanceInit? We want to be able to spawn multiple of the module.
    mDsp.init(gSampleRate);
@@ -68,7 +68,17 @@ void FaustConnector::DrawModule()
    if (Minimized() || IsVisible() == false)
       return;
 
-   mDspUi.DrawControls();
+   mDspUi.Impl_DrawControls();
+}
+
+void FaustConnector::CheckboxUpdated(Checkbox* checkbox, double time)
+{
+   mDspUi.Impl_CheckboxUpdate(checkbox, time);
+}
+
+void FaustConnector::TextEntryComplete(TextEntry* entry)
+{
+   mDspUi.Impl_TextEntryComplete(entry);
 }
 
 // TODO(Blake): what to do with time parameter?
