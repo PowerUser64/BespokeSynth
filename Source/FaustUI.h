@@ -25,6 +25,7 @@
 #include "ClickButton.h"
 #include "IDrawableModule.h"
 #include "Slider.h"
+#include "TextEntry.h"
 #include "faust/gui/UI.h"
 
 // TODO:
@@ -36,13 +37,11 @@ class FaustUI : public UI
 {
 public:
    // TODO: can this be just a single parameter?
-   FaustUI(IFloatSliderListener* parentfloatslider, IDrawableModule* parentDrawableModule);
+   FaustUI(IFloatSliderListener* parentFloatSlider, IDrawableModule* parentDrawableModule, ITextEntryListener* parentTextEntryListener);
 
-   // if a module wanted to control the drawing of its controls,
-   // we would make a method for fetching the list of controls
-   void DrawControls();
-
-   void UpdateCursorPos(int x, int y);
+   void Impl_DrawControls();
+   void Impl_CheckboxUpdate(Checkbox* checkbox, double time);
+   void Impl_TextEntryComplete(TextEntry* entry);
 
    // -- widget layouts
 
@@ -69,13 +68,24 @@ public:
    void addSoundfile(const char* label, const char* filename, Soundfile** sf_zone) override { }
 
 private:
+   void UpdateCursorPos(int x, int y);
+
    std::vector<IUIControl*> mControls;
+   std::vector<TextEntry*> mTextEntries;
+   std::vector<Checkbox*> mCheckboxes;
+   std::vector<bool*> mCheckboxBools;
+   std::vector<float*> mCheckboxFloats;
+   std::vector<float*> mButtonFloats;
 
    int mRowWidth = 100;
    int mRowHeight = 15;
 
-   const int mSliderHeight = 15;
-   const int mSliderWidth = 100;
+   const int mSliderSizeX = 100;
+   const int mSliderSizeY = 15;
+   const int mCheckboxSizeX = 100;
+   const int mCheckboxSizeY = 15;
+   const int mTextEntrySizeX = 100;
+   const int mTextEntrySizeY = 15;
 
    const int mElementPaddingX = 5;
    const int mElementPaddingY = 2;
@@ -87,6 +97,7 @@ private:
    int mModuleSizeX = 100;
    int mModuleSizeY = 5;
 
-   IFloatSliderListener* mParentFloatSliderListner;
    IDrawableModule* mParentDrawableModule;
+   IFloatSliderListener* mParentFloatSliderListner;
+   ITextEntryListener* mParentTextEntryListener;
 };
