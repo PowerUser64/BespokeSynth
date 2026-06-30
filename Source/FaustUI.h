@@ -41,7 +41,6 @@ public:
 
    void Impl_DrawControls();
    void Impl_CheckboxUpdate(Checkbox* checkbox, double time);
-   void Impl_TextEntryComplete(TextEntry* entry);
 
    // -- widget layouts
 
