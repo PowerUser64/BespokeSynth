@@ -78,7 +78,6 @@ void FaustConnector::CheckboxUpdated(Checkbox* checkbox, double time)
 
 void FaustConnector::TextEntryComplete(TextEntry* entry)
 {
-   mDspUi.Impl_TextEntryComplete(entry);
 }
 
 // TODO(Blake): what to do with time parameter?

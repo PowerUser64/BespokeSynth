@@ -62,10 +62,6 @@ void FaustUI::Impl_CheckboxUpdate(Checkbox* checkbox, double time)
    }
 }
 
-void FaustUI::Impl_TextEntryComplete(TextEntry* entry)
-{
-}
-
 void FaustUI::UpdateCursorPos(int x, int y)
 {
    x += mElementPaddingX;
