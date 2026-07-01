@@ -37,38 +37,57 @@ FaustConnector::~FaustConnector()
 
 // QUESTION:
 // - how to deduplicate DSP's when editing? should we?
-// -
+// - I think we shouldn't, and instead we should have save/load buttons
 
 // DEMO
-size_t dspIndex = 0;
+int dspIndex = -1;
+
+// filesystem
+std::vector<std::string> programs = {
+   // sine-advanced-stereo-params.dsp
+   R"(import("stdfaust.lib"); f = hslider("freq", 220, 55, 880, 0.01); process = ((_ + 1) * os.osc(f)) * 0.5, ((_ + 1) * os.osc(f)) * 0.5 : _ * 1/2, _ * 1/2;)",
+   // panning-sine.dsp
+   R"(import("stdfaust.lib"); lfo = os.osc(2); lfo2 = cos(os.sawtooth(1)/2+1); sig = os.osc(220); process = sig * lfo2, sig * lfo;)",
+   // add-params.dsp
+   R"(s0 = hslider("s0", 0, -1, 1, 0.01); s1 = hslider("s1", 0, -1, 1, 0.01); s2 = hslider("s2", 0, -1, 1, 0.01); s3 = hslider("s3", 0, -1, 1, 0.01); s4 = hslider("s4", 0, -1, 1, 0.01); s5 = hslider("s5", 0, -1, 1, 0.01); s6 = hslider("s6", 0, -1, 1, 0.01); s7 = hslider("s7", 0, -1, 1, 0.01); s8 = hslider("s8", 0, -1, 1, 0.01); s9 = hslider("s9", 0, -1, 1, 0.01); add = _ + s0 + s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8 + s9; process = add, add;)",
+   // all-ui-elements.dsp
+   R"(import("stdfaust.lib"); b = button("button"); c = checkbox("checkbox"); s = hslider("hslider", 0, 0, 1, 0.1); S = vslider("vslider", 0, 0, 1, 0.1); n = nentry("numentry", 0, 0, 1, 0.1); g = hbargraph("hbargraph", -1, 1); G = vbargraph("vbargraph", -1, 1); all = b*c*s*S*n : g : G; process = _ * all, _ * all;)",
+};
+
+// filesystem cache
+std::vector<std::string> cachedPrograms(programs.size());
 
 FaustConnector::FaustConnector()
 : IAudioProcessor(gBufferSize)
 , IDrawableModule(120, 10)
 , mDspUi(this, this, this)
 {
-   std::vector<std::string> programs = {
-      // sine-advanced-stereo-params.dsp
-      R"(import("stdfaust.lib"); f = hslider("freq", 220, 55, 880, 0.01); process = ((_ + 1) * os.osc(f)) * 0.5, ((_ + 1) * os.osc(f)) * 0.5 : _ * 1/2, _ * 1/2;)",
-      // panning-sine.dsp
-      R"(import("stdfaust.lib"); lfo = os.osc(2); lfo2 = cos(os.sawtooth(1)/2+1); sig = os.osc(220); process = sig * lfo2, sig * lfo;)",
-      // add-params.dsp
-      R"(s0 = hslider("s0", 0, -1, 1, 0.01); s1 = hslider("s1", 0, -1, 1, 0.01); s2 = hslider("s2", 0, -1, 1, 0.01); s3 = hslider("s3", 0, -1, 1, 0.01); s4 = hslider("s4", 0, -1, 1, 0.01); s5 = hslider("s5", 0, -1, 1, 0.01); s6 = hslider("s6", 0, -1, 1, 0.01); s7 = hslider("s7", 0, -1, 1, 0.01); s8 = hslider("s8", 0, -1, 1, 0.01); s9 = hslider("s9", 0, -1, 1, 0.01); add = _ + s0 + s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8 + s9; process = add, add;)",
-      // all-ui-elements.dsp
-      R"(import("stdfaust.lib"); b = button("button"); c = checkbox("checkbox"); s = hslider("hslider", 0, 0, 1, 0.1); S = vslider("vslider", 0, 0, 1, 0.1); n = nentry("numentry", 0, 0, 1, 0.1); g = hbargraph("hbargraph", -1, 1); G = vbargraph("vbargraph", -1, 1); all = b*c*s*S*n : g : G; process = _ * all, _ * all;)",
-   };
+   dspIndex = (dspIndex + 1) % programs.size();
+
+   assert(programs.size() == cachedPrograms.size());
 
    // DEMO: pick a dsp from the list of programs
    mDspString = programs[dspIndex];
-   dspIndex = (dspIndex + 1) % programs.size();
 
    std::string err;
-   mDspFactory = createInterpreterDSPFactoryFromString("faustconnector", mDspString, 0, 0, err);
+   if (cachedPrograms[dspIndex] != "")
+   {
+      ofLog() << "FaustConnector: Cache hit: Using cached bitcode";
+      mDspFactory = readInterpreterDSPFactoryFromBitcode(cachedPrograms[dspIndex], err);
+   }
+   else
+   {
+      ofLog() << "FaustConnector: Cache miss: Compiling DSP factory";
+      mDspFactory = createInterpreterDSPFactoryFromString("faustconnector", mDspString, 0, 0, err);
+   }
+
    // TODO: check `err` and display it on the module
    // TODO: remove the assert
    assert(mDspFactory != 0);
    mDsp = mDspFactory->createDSPInstance();
    mDsp->init(gSampleRate);
+
+   cachedPrograms[dspIndex] = writeInterpreterDSPFactoryToBitcode(mDspFactory);
 }
 
 // TODO(Blake): Faust modules need to be initialized before we can say how much IO they have
