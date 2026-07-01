@@ -825,11 +825,15 @@ target_include_directories(BespokeSynth PRIVATE
     ${Python_INCLUDE_DIRS}
     )
 
-# TODO(Blake): optionally use the system faust
-target_include_directories(BespokeSynth PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/../libs/faust/architecture/faust/dsp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../libs/faust/architecture/faust/gui"
-    )
+find_library(LIBFAUST faust)
+if (LIBFAUST)
+    target_link_libraries(BespokeSynth PRIVATE ${LIBFAUST})
+else()
+    # Fallback to the includes in the faust submodule
+    target_include_directories(BespokeSynth PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/../libs/faust/architecture"
+        )
+endif()
 
 target_compile_definitions(BespokeSynth PRIVATE
     JUCE_MODAL_LOOPS_PERMITTED=1
