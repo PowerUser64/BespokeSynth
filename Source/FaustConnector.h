@@ -35,9 +35,6 @@
 #include "faust/gui/UI.h"
 #include "faust/gui/meta.h"
 
-// NOTE: this include controls what faust module gets compiled:
-// #include "faust/all-ui-elements.hpp"
-
 // TODO(Blake):
 // This define exists because we need an array of pointers to channels for
 // faust to process, and for memory management reasons, it's nice for its size
