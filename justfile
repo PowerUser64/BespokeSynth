@@ -124,13 +124,13 @@ run *command_prefix:
 
 # Compile all `.dsp` in Source/faust/
 faustc:
-   #!/bin/sh
+   #!/usr/bin/env sh
    {{echo_do}}
 
    cd Source/faust
    for f in *.dsp; do
       newf="${f%%.*}.hpp"
-      echo_do faust "$f" > "$newf"
+      echo_do faust "$f" > "$newf" &
    done
 
 

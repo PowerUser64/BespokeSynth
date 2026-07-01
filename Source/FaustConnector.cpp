@@ -27,16 +27,48 @@
 #include "ModularSynth.h" // save/load
 #include "Profiler.h" // profiling
 #include "SynthGlobals.h"
+#include "faust/dsp/interpreter-dsp.h"
+#include <string>
 
-FaustConnector::~FaustConnector() { };
+FaustConnector::~FaustConnector()
+{
+   delete mDsp;
+};
+
+// QUESTION:
+// - how to deduplicate DSP's when editing? should we?
+// -
+
+// DEMO
+size_t dspIndex = 0;
 
 FaustConnector::FaustConnector()
 : IAudioProcessor(gBufferSize)
-, IDrawableModule(120, 40)
+, IDrawableModule(120, 10)
 , mDspUi(this, this, this)
 {
-   // TODO(Blake): Should we use init or instanceInit? We want to be able to spawn multiple of the module.
-   mDsp.init(gSampleRate);
+   std::vector<std::string> programs = {
+      // sine-advanced-stereo-params.dsp
+      R"(import("stdfaust.lib"); f = hslider("freq", 220, 55, 880, 0.01); process = ((_ + 1) * os.osc(f)) * 0.5, ((_ + 1) * os.osc(f)) * 0.5 : _ * 1/2, _ * 1/2;)",
+      // panning-sine.dsp
+      R"(import("stdfaust.lib"); lfo = os.osc(2); lfo2 = cos(os.sawtooth(1)/2+1); sig = os.osc(220); process = sig * lfo2, sig * lfo;)",
+      // add-params.dsp
+      R"(s0 = hslider("s0", 0, -1, 1, 0.01); s1 = hslider("s1", 0, -1, 1, 0.01); s2 = hslider("s2", 0, -1, 1, 0.01); s3 = hslider("s3", 0, -1, 1, 0.01); s4 = hslider("s4", 0, -1, 1, 0.01); s5 = hslider("s5", 0, -1, 1, 0.01); s6 = hslider("s6", 0, -1, 1, 0.01); s7 = hslider("s7", 0, -1, 1, 0.01); s8 = hslider("s8", 0, -1, 1, 0.01); s9 = hslider("s9", 0, -1, 1, 0.01); add = _ + s0 + s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8 + s9; process = add, add;)",
+      // all-ui-elements.dsp
+      R"(import("stdfaust.lib"); b = button("button"); c = checkbox("checkbox"); s = hslider("hslider", 0, 0, 1, 0.1); S = vslider("vslider", 0, 0, 1, 0.1); n = nentry("numentry", 0, 0, 1, 0.1); g = hbargraph("hbargraph", -1, 1); G = vbargraph("vbargraph", -1, 1); all = b*c*s*S*n : g : G; process = _ * all, _ * all;)",
+   };
+
+   // DEMO: pick a dsp from the list of programs
+   mDspString = programs[dspIndex];
+   dspIndex = (dspIndex + 1) % programs.size();
+
+   std::string err;
+   mDspFactory = createInterpreterDSPFactoryFromString("faustconnector", mDspString, 0, 0, err);
+   // TODO: check `err` and display it on the module
+   // TODO: remove the assert
+   assert(mDspFactory != 0);
+   mDsp = mDspFactory->createDSPInstance();
+   mDsp->init(gSampleRate);
 }
 
 // TODO(Blake): Faust modules need to be initialized before we can say how much IO they have
@@ -47,15 +79,15 @@ bool FaustConnector::AcceptsPulses() { return false; }
 IDrawableModule* FaustConnector::Create()
 {
    FaustConnector* ret = new FaustConnector();
-   assert(ret->mDsp.getNumOutputs() <= FAUST_MAX_CHANNELS);
-   assert(ret->mDsp.getNumInputs() <= FAUST_MAX_CHANNELS);
+   assert(ret->mDsp->getNumOutputs() <= FAUST_MAX_CHANNELS);
+   assert(ret->mDsp->getNumInputs() <= FAUST_MAX_CHANNELS);
    return ret;
 }
 
 void FaustConnector::CreateUIControls()
 {
    IDrawableModule::CreateUIControls();
-   mDsp.buildUserInterface(&mDspUi);
+   mDsp->buildUserInterface(&mDspUi);
 }
 
 bool FaustConnector::IsEnabled() const
@@ -95,7 +127,7 @@ void FaustConnector::Process(double time)
    if (!mEnabled)
    {
       // Make the "enabled" button act as a bypass for faust programs that look like audio effects
-      if (mDsp.getNumInputs() != 0 && GetBuffer()->NumActiveChannels() != 0)
+      if (mDsp->getNumInputs() != 0 && GetBuffer()->NumActiveChannels() != 0)
       {
          SyncBuffers();
          for (int ch = 0; ch < GetBuffer()->NumActiveChannels(); ++ch)
@@ -109,10 +141,10 @@ void FaustConnector::Process(double time)
       return;
    }
 
-   int buf_count = MAX(mDsp.getNumInputs(), mDsp.getNumOutputs());
+   int buf_count = MAX(mDsp->getNumInputs(), mDsp->getNumOutputs());
    SyncBuffers(buf_count);
 
-   if (mDsp.getNumInputs() == 0 || GetBuffer()->NumActiveChannels() == 0)
+   if (mDsp->getNumInputs() == 0 || GetBuffer()->NumActiveChannels() == 0)
    {
       mInChannels = { gZeroBuffer, gZeroBuffer };
    }
@@ -120,7 +152,7 @@ void FaustConnector::Process(double time)
    {
       // enable to use the zero buffer for remaining mismatched channels
       int last_module_ch = MIN(FAUST_MAX_CHANNELS, GetBuffer()->NumActiveChannels());
-      int last_dsp_ch = MIN(FAUST_MAX_CHANNELS, mDsp.getNumInputs());
+      int last_dsp_ch = MIN(FAUST_MAX_CHANNELS, mDsp->getNumInputs());
       for (int ch = 0; ch < last_dsp_ch; ++ch)
       {
          if (ch < last_module_ch)
@@ -132,7 +164,7 @@ void FaustConnector::Process(double time)
 
 
    {
-      int last_ch = MIN(mDsp.getNumOutputs(), MIN(FAUST_MAX_CHANNELS, target->GetBuffer()->NumActiveChannels()));
+      int last_ch = MIN(mDsp->getNumOutputs(), MIN(FAUST_MAX_CHANNELS, target->GetBuffer()->NumActiveChannels()));
 
       gWorkChannelBuffer.SetNumActiveChannels(last_ch);
 
@@ -142,12 +174,12 @@ void FaustConnector::Process(double time)
       }
 
       {
-         if (target->GetBuffer()->NumActiveChannels() != mDsp.getNumOutputs())
+         if (target->GetBuffer()->NumActiveChannels() != mDsp->getNumOutputs())
             return;
       }
    }
 
-   mDsp.compute(gBufferSize, mInChannels.begin(), mOutChannels.begin());
+   mDsp->compute(gBufferSize, mInChannels.begin(), mOutChannels.begin());
 
    for (int ch = 0; ch < gWorkChannelBuffer.NumActiveChannels(); ++ch)
    {

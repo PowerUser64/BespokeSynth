@@ -24,19 +24,19 @@
 
 #include "IAudioProcessor.h"
 #include "TextEntry.h"
-#include "IAudioReceiver.h"
 #include "IDrawableModule.h"
 #include "FaustUI.h"
 #include "Slider.h"
 #include <array>
+#include "faust/dsp/interpreter-dsp.h"
 
 // Faust includes (not directly used, TODO: figure out how to include these in the compiled program)
-#include "dsp.h"
-#include "UI.h"
-#include "meta.h"
+#include "faust/dsp/dsp.h"
+#include "faust/gui/UI.h"
+#include "faust/gui/meta.h"
 
 // NOTE: this include controls what faust module gets compiled:
-#include "faust/all-ui-elements.hpp"
+// #include "faust/all-ui-elements.hpp"
 
 // TODO(Blake):
 // This define exists because we need an array of pointers to channels for
@@ -72,8 +72,12 @@ private:
    std::array<float*, FAUST_MAX_CHANNELS> mInChannels = { 0 };
    std::array<float*, FAUST_MAX_CHANNELS> mOutChannels = { 0 };
 
-   mydsp mDsp;
+   interpreter_dsp* mDsp;
    FaustUI mDspUi;
+
+   interpreter_dsp_factory* mDspFactory;
+   // TODO: watch a file instead
+   std::string mDspString;
 
    void SetMetadataFromDSP();
 };
