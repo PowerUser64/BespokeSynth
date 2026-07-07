@@ -825,17 +825,11 @@ target_include_directories(BespokeSynth PRIVATE
     ${Python_INCLUDE_DIRS}
     )
 
-if(BESPOKE_USE_SYSTEM_FAUST)
-    find_library(LIBFAUST faust)
-    if(LIBFAUST)
-        message(STATUS "Using system libfaust: ${LIBFAUST}")
-        target_link_libraries(BespokeSynth PRIVATE ${LIBFAUST})
-    else()
-        message(FATAL_ERROR "BESPOKE_USE_SYSTEM_FAUST is ON but libfaust was not found on the system")
-    endif()
+find_library(LIBFAUST faust)
+if (LIBFAUST)
+    target_link_libraries(BespokeSynth PRIVATE ${LIBFAUST})
 else()
-    message(STATUS "Linking against bundled static libfaust")
-    target_link_libraries(BespokeSynth PRIVATE staticlib)
+    # Fallback to the includes in the faust submodule
     target_include_directories(BespokeSynth PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/../libs/faust/architecture"
         )
