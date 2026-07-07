@@ -27,44 +27,23 @@
 #include "ModularSynth.h" // save/load
 #include "Profiler.h" // profiling
 #include "SynthGlobals.h"
-#include "faust/dsp/llvm-dsp.h"
-#include <array>
-#include <cassert>
+#include "faust/dsp/interpreter-dsp.h"
 #include <string>
 
 FaustConnector::~FaustConnector()
 {
-   CleanupFaustDsp();
+   delete mDsp;
 };
-
-void FaustConnector::CleanupFaustDsp()
-{
-   mDsp = nullptr;
-   delete mLlvmDsp;
-   mLlvmDsp = nullptr;
-   delete mInterpDsp;
-   mInterpDsp = nullptr;
-
-   if (mInterpDspFactory)
-      deleteInterpreterDSPFactory(mInterpDspFactory);
-   mInterpDspFactory = nullptr;
-   if (mLlvmDspFactory)
-      deleteDSPFactory(mLlvmDspFactory);
-   mLlvmDspFactory = nullptr;
-}
 
 // QUESTION:
 // - how to deduplicate DSP's when editing? should we?
-//   - I think we shouldn't, and instead we should have save/load buttons
+// - I think we shouldn't, and instead we should have save/load buttons
 
 // DEMO
 int dspIndex = -1;
 
-bool shouldUseLlvm = false;
-
 // filesystem
 std::vector<std::string> programs = {
-   // R"(process = _,_;)",
    // sine-advanced-stereo-params.dsp
    R"(import("stdfaust.lib"); f = hslider("freq", 220, 55, 880, 0.01); process = ((_ + 1) * os.osc(f)) * 0.5, ((_ + 1) * os.osc(f)) * 0.5 : _ * 1/2, _ * 1/2;)",
    // panning-sine.dsp
@@ -77,73 +56,38 @@ std::vector<std::string> programs = {
 
 // filesystem cache
 std::vector<std::string> cachedPrograms(programs.size());
-std::vector<std::string> cachedLLVMPrograms(programs.size());
 
 FaustConnector::FaustConnector()
 : IAudioProcessor(gBufferSize)
 , IDrawableModule(120, 10)
 , mDspUi(this, this, this)
-, mFaustLibPath(ofToDataPath("scripts/faust/_stdlib"))
-, mFaustFactoryArgv({ "-I", mFaustLibPath.c_str() })
 {
-   mUseLlvm = shouldUseLlvm;
-   shouldUseLlvm = !shouldUseLlvm;
-   InitFaustDSP();
-}
-
-void FaustConnector::InitFaustDSP()
-{
-   CleanupFaustDsp();
-
    dspIndex = (dspIndex + 1) % programs.size();
+
+   assert(programs.size() == cachedPrograms.size());
 
    // DEMO: pick a dsp from the list of programs
    mDspString = programs[dspIndex];
 
-   if (mUseLlvm)
+   std::string err;
+   if (cachedPrograms[dspIndex] != "")
    {
-      if (cachedLLVMPrograms[dspIndex] != "")
-      {
-         ofLog() << "FaustConnector: Cache hit: Using cached machine code";
-         mLlvmDspFactory = readDSPFactoryFromMachine(cachedLLVMPrograms[dspIndex], mLlvmTarget, mFaustError);
-      }
-      else
-      {
-         ofLog() << "FaustConnector: Cache miss: Compiling DSP factory (LLVM)";
-         mLlvmDspFactory = createDSPFactoryFromString("faustconnector", mDspString, mFaustFactoryArgv.size(), mFaustFactoryArgv.begin(), mLlvmTarget, mFaustError);
-      }
-      if (mLlvmDspFactory == 0)
-      {
-         HandleFaustError();
-         return;
-      }
-      mLlvmDsp = mLlvmDspFactory->createDSPInstance();
-      mDsp = mLlvmDsp;
-      cachedLLVMPrograms[dspIndex] = writeDSPFactoryToMachine(mLlvmDspFactory, mLlvmTarget);
+      ofLog() << "FaustConnector: Cache hit: Using cached bitcode";
+      mDspFactory = readInterpreterDSPFactoryFromBitcode(cachedPrograms[dspIndex], err);
    }
    else
    {
-      if (cachedPrograms[dspIndex] != "")
-      {
-         ofLog() << "FaustConnector: Cache hit: Using cached bitcode";
-         mInterpDspFactory = readInterpreterDSPFactoryFromBitcode(cachedPrograms[dspIndex], mFaustError);
-      }
-      else
-      {
-         ofLog() << "FaustConnector: Cache miss: Compiling DSP factory (interpreter)";
-         mInterpDspFactory = createInterpreterDSPFactoryFromString("faustconnector", mDspString, mFaustFactoryArgv.size(), mFaustFactoryArgv.begin(), mFaustError);
-      }
-      if (mInterpDspFactory == 0)
-      {
-         HandleFaustError();
-         return;
-      }
-      mInterpDsp = mInterpDspFactory->createDSPInstance();
-      mDsp = mInterpDsp;
-      cachedPrograms[dspIndex] = writeInterpreterDSPFactoryToBitcode(mInterpDspFactory);
+      ofLog() << "FaustConnector: Cache miss: Compiling DSP factory";
+      mDspFactory = createInterpreterDSPFactoryFromString("faustconnector", mDspString, 0, 0, err);
    }
 
+   // TODO: check `err` and display it on the module
+   // TODO: remove the assert
+   assert(mDspFactory != 0);
+   mDsp = mDspFactory->createDSPInstance();
    mDsp->init(gSampleRate);
+
+   cachedPrograms[dspIndex] = writeInterpreterDSPFactoryToBitcode(mDspFactory);
 }
 
 // TODO(Blake): Faust modules need to be initialized before we can say how much IO they have
@@ -165,11 +109,6 @@ void FaustConnector::CreateUIControls()
    mDsp->buildUserInterface(&mDspUi);
 }
 
-void FaustConnector::HandleFaustError()
-{
-   ofLog() << "Faust error:" << mFaustError;
-}
-
 bool FaustConnector::IsEnabled() const
 {
    return mEnabled;
@@ -188,6 +127,10 @@ void FaustConnector::CheckboxUpdated(Checkbox* checkbox, double time)
    mDspUi.Impl_CheckboxUpdate(checkbox, time);
 }
 
+void FaustConnector::TextEntryComplete(TextEntry* entry)
+{
+}
+
 // TODO(Blake): what to do with time parameter?
 void FaustConnector::Process(double time)
 {
@@ -198,12 +141,9 @@ void FaustConnector::Process(double time)
    if (target == nullptr)
       return;
 
-   // disable if we're in an error state
-   if (mDsp == 0)
-      mEnabled = false;
-
-   // passthrough
-   if (!mEnabled || mDsp == 0)
+   // TODO(Blake): decide if this is the best way to support the `enabled` button
+   // IDEA: maybe we could do it with metadata attributes? (eg. have an attribute that says `disabledBehavior = bypass`)
+   if (!mEnabled)
    {
       // Make the "enabled" button act as a bypass for faust programs that look like audio effects
       if (mDsp->getNumInputs() != 0 && GetBuffer()->NumActiveChannels() != 0)
