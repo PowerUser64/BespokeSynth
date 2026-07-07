@@ -18,6 +18,7 @@ echo_do := "echo_do() {
 # Aliases for common commands
 alias br := build-run
 alias rel := release
+alias cb := clean-build
 alias b := build
 alias r := run
 alias g := run-gdb
@@ -32,6 +33,14 @@ build-run *command_prefix:
    {{echo_do}}
 
    echo_do just build run "$@"
+
+
+# Equivalent to `just clean build`
+clean-build:
+   #!/usr/bin/env sh
+   {{echo_do}}
+
+   echo_do just clean build
 
 
 # Run with gdb
