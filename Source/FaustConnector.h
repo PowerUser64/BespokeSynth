@@ -32,7 +32,8 @@
 
 // Faust includes (not directly used, TODO: figure out how to include these in the compiled program)
 #include "faust/dsp/dsp.h"
-#include "faust/dsp/llvm-dsp.h"
+#include "faust/gui/UI.h"
+#include "faust/gui/meta.h"
 
 // TODO(Blake):
 // This define exists because we need an array of pointers to channels for
@@ -44,10 +45,9 @@
 class FaustConnector : public IAudioProcessor, public IDrawableModule, public ITextEntryListener, public IFloatSliderListener
 {
 public:
+   // Module interface
    FaustConnector();
    virtual ~FaustConnector();
-
-   // Module interface
    static bool AcceptsAudio();
    static bool AcceptsNotes();
    static bool AcceptsPulses();
@@ -58,8 +58,7 @@ public:
    void FloatSliderUpdated(FloatSlider* slider, float oldVal, double time) override { };
    void DrawModule() override;
    void CheckboxUpdated(Checkbox* checkbox, double time) override;
-   void TextEntryComplete(TextEntry* entry) override { };
-   void HandleFaustError();
+   void TextEntryComplete(TextEntry* entry) override;
 
    // Process
    void Process(double time) override;
@@ -67,33 +66,15 @@ public:
    bool IsEnabled() const override;
 
 private:
-   void SetMetadataFromDSP();
-   void InitFaustDSP();
-   void CleanupFaustDsp();
-
-   bool mUseLlvm = false;
-
    std::array<float*, FAUST_MAX_CHANNELS> mInChannels = { 0 };
    std::array<float*, FAUST_MAX_CHANNELS> mOutChannels = { 0 };
 
-   std::string mLlvmTarget = "";
-
-   std::string mFaustError;
-
-   // generic faust components (interp AND llvm)
-   dsp* mDsp = nullptr;
+   interpreter_dsp* mDsp;
    FaustUI mDspUi;
 
-   // non-generic faust components (interp OR llvm)
-   interpreter_dsp* mInterpDsp = nullptr;
-   interpreter_dsp_factory* mInterpDspFactory = nullptr;
-   llvm_dsp* mLlvmDsp = nullptr;
-   llvm_dsp_factory* mLlvmDspFactory = nullptr;
-
+   interpreter_dsp_factory* mDspFactory;
    // TODO: watch a file instead
    std::string mDspString;
 
-   const std::string mFaustLibPath;
-
-   std::array<const char*, 2> mFaustFactoryArgv;
+   void SetMetadataFromDSP();
 };
