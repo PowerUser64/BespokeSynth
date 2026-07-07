@@ -39,24 +39,3 @@ else()
   message(STATUS "Using system provided tuning-library")
 endif()
 add_subdirectory(xwax EXCLUDE_FROM_ALL)
-
-if (NOT BESPOKE_USE_SYSTEM_FAUST)
-  message(STATUS "Using bundled libfaust")
-  include(${CMAKE_CURRENT_SOURCE_DIR}/faust/build/backends/interp.cmake)
-  set(INCLUDE_STATIC     ON CACHE BOOL "" FORCE)
-  # Disable some unneeded faust features
-  set(INCLUDE_EXECUTABLE OFF)
-  set(INCLUDE_OSC        OFF)
-  set(INCLUDE_HTTP       OFF)
-  set(INCLUDE_EMCC       OFF)
-  set(INCLUDE_WASM_GLUE  OFF)
-  message(STATUS "Faust LLVM backend enabled")
-  set(LLVM_BACKEND COMPILER STATIC DYNAMIC)
-  add_subdirectory(
-    ${CMAKE_CURRENT_SOURCE_DIR}/faust/build
-    ${CMAKE_BINARY_DIR}/faust
-    EXCLUDE_FROM_ALL
-    )
-else()
-  message(STATUS "Using system-provided libfaust")
-endif()
