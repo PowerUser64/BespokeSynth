@@ -25,6 +25,7 @@
 #include "ChannelBuffer.h"
 #include "IAudioReceiver.h"
 #include "ModularSynth.h" // save/load
+#include "OpenFrameworksPort.h"
 #include "Profiler.h" // profiling
 #include "SynthGlobals.h"
 #include "faust/dsp/interpreter-dsp.h"
@@ -61,6 +62,8 @@ FaustConnector::FaustConnector()
 : IAudioProcessor(gBufferSize)
 , IDrawableModule(120, 10)
 , mDspUi(this, this, this)
+, mFaustLibPath(ofToDataPath("scripts/faust/_stdlib"))
+, mFaustFactoryArgv({ "-I", mFaustLibPath.c_str() })
 {
    dspIndex = (dspIndex + 1) % programs.size();
 
@@ -78,7 +81,7 @@ FaustConnector::FaustConnector()
    else
    {
       ofLog() << "FaustConnector: Cache miss: Compiling DSP factory";
-      mDspFactory = createInterpreterDSPFactoryFromString("faustconnector", mDspString, 0, 0, err);
+      mDspFactory = createInterpreterDSPFactoryFromString("faustconnector", mDspString, mFaustFactoryArgv.size(), mFaustFactoryArgv.begin(), err);
    }
 
    // TODO: check `err` and display it on the module

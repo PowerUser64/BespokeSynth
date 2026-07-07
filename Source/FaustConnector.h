@@ -76,5 +76,8 @@ private:
    // TODO: watch a file instead
    std::string mDspString;
 
+   std::string mFaustLibPath;
+   std::array<const char*, 2> mFaustFactoryArgv;
+
    void SetMetadataFromDSP();
 };
