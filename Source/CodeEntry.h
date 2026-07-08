@@ -29,6 +29,7 @@
 
 #include "IUIControl.h"
 #include "SynthGlobals.h"
+#include "ofxJSONElement.h"
 
 class ICodeEntryListener
 {
