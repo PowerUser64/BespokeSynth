@@ -29,6 +29,7 @@
 #include "Profiler.h" // profiling
 #include "SynthGlobals.h"
 #include "faust/dsp/interpreter-dsp.h"
+#include <cassert>
 #include <string>
 
 FaustConnector::~FaustConnector()
@@ -45,52 +46,87 @@ int dspIndex = -1;
 
 // filesystem
 std::vector<std::string> programs = {
+   // error.dsp
+   // R"(process = _)",
    // sine-advanced-stereo-params.dsp
-   R"(import("stdfaust.lib"); f = hslider("freq", 220, 55, 880, 0.01); process = ((_ + 1) * os.osc(f)) * 0.5, ((_ + 1) * os.osc(f)) * 0.5 : _ * 1/2, _ * 1/2;)",
+   R"(import("stdfaust.lib");)"
+   "\n"
+   R"(f = hslider("freq", 220, 55, 880, 0.01);)"
+   "\n"
+   R"(process = ((_ + 1) * os.osc(f)) * 0.5,)"
+   "\n"
+   R"(          ((_ + 1) * os.osc(f)))"
+   "\n"
+   R"(          : _ * 1/2,)"
+   "\n"
+   R"(            _ * 1/2;)",
    // panning-sine.dsp
-   R"(import("stdfaust.lib"); lfo = os.osc(2); lfo2 = cos(os.sawtooth(1)/2+1); sig = os.osc(220); process = sig * lfo2, sig * lfo;)",
+   R"(import("stdfaust.lib");)"
+   "\n"
+   R"(lfo = os.osc(2);)"
+   "\n"
+   R"(lfo2 = cos(os.sawtooth(1)/2+1);)"
+   "\n"
+   R"(sig = os.osc(220);)"
+   "\n"
+   R"(process = sig * lfo2, sig * lfo;)",
    // add-params.dsp
-   R"(s0 = hslider("s0", 0, -1, 1, 0.01); s1 = hslider("s1", 0, -1, 1, 0.01); s2 = hslider("s2", 0, -1, 1, 0.01); s3 = hslider("s3", 0, -1, 1, 0.01); s4 = hslider("s4", 0, -1, 1, 0.01); s5 = hslider("s5", 0, -1, 1, 0.01); s6 = hslider("s6", 0, -1, 1, 0.01); s7 = hslider("s7", 0, -1, 1, 0.01); s8 = hslider("s8", 0, -1, 1, 0.01); s9 = hslider("s9", 0, -1, 1, 0.01); add = _ + s0 + s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8 + s9; process = add, add;)",
+   R"(s0 = hslider("s0", 0, -1, 1, 0.01);)"
+   "\n"
+   R"(s1 = hslider("s1", 0, -1, 1, 0.01);)"
+   "\n"
+   R"(s2 = hslider("s2", 0, -1, 1, 0.01);)"
+   "\n"
+   R"(s3 = hslider("s3", 0, -1, 1, 0.01);)"
+   "\n"
+   R"(s4 = hslider("s4", 0, -1, 1, 0.01);)"
+   "\n"
+   R"(s5 = hslider("s5", 0, -1, 1, 0.01);)"
+   "\n"
+   R"(s6 = hslider("s6", 0, -1, 1, 0.01); )"
+   "\n"
+   R"(s7 = hslider("s7", 0, -1, 1, 0.01); )"
+   "\n"
+   R"(s8 = hslider("s8", 0, -1, 1, 0.01); )"
+   "\n"
+   R"(s9 = hslider("s9", 0, -1, 1, 0.01); )"
+   "\n"
+   R"(add = _ + s0 + s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8 + s9; )"
+   "\n"
+   R"(process = add, add;)",
    // all-ui-elements.dsp
-   R"(import("stdfaust.lib"); b = button("button"); c = checkbox("checkbox"); s = hslider("hslider", 0, 0, 1, 0.1); S = vslider("vslider", 0, 0, 1, 0.1); n = nentry("numentry", 0, 0, 1, 0.1); g = hbargraph("hbargraph", -1, 1); G = vbargraph("vbargraph", -1, 1); all = b*c*s*S*n : g : G; process = _ * all, _ * all;)",
+   R"(import("stdfaust.lib"); )"
+   "\n"
+   R"(b = button("button"); )"
+   "\n"
+   R"(c = checkbox("checkbox"); )"
+   "\n"
+   R"(s = hslider("hslider", 0, 0, 1, 0.1); )"
+   "\n"
+   R"(S = vslider("vslider", 0, 0, 1, 0.1); )"
+   "\n"
+   R"(n = nentry("numentry", 0, 0, 1, 0.1); )"
+   "\n"
+   R"(g = hbargraph("hbargraph", -1, 1); )"
+   "\n"
+   R"(G = vbargraph("vbargraph", -1, 1); )"
+   "\n"
+   R"(all = b*c*s*S*n : g : G; )"
+   "\n"
+   R"(process = _ * all, _ * all;)",
 };
-
-// filesystem cache
-std::vector<std::string> cachedPrograms(programs.size());
 
 FaustConnector::FaustConnector()
 : IAudioProcessor(gBufferSize)
 , IDrawableModule(120, 10)
-, mDspUi(this, this, this)
+, mDspUi(new FaustUI(this, this, this))
 , mFaustLibPath(ofToDataPath("scripts/faust/_stdlib"))
 , mFaustFactoryArgv({ "-I", mFaustLibPath.c_str() })
 {
    dspIndex = (dspIndex + 1) % programs.size();
-
-   assert(programs.size() == cachedPrograms.size());
-
-   // DEMO: pick a dsp from the list of programs
    mDspString = programs[dspIndex];
 
-   std::string err;
-   if (cachedPrograms[dspIndex] != "")
-   {
-      ofLog() << "FaustConnector: Cache hit: Using cached bitcode";
-      mDspFactory = readInterpreterDSPFactoryFromBitcode(cachedPrograms[dspIndex], err);
-   }
-   else
-   {
-      ofLog() << "FaustConnector: Cache miss: Compiling DSP factory";
-      mDspFactory = createInterpreterDSPFactoryFromString("faustconnector", mDspString, mFaustFactoryArgv.size(), mFaustFactoryArgv.begin(), err);
-   }
-
-   // TODO: check `err` and display it on the module
-   // TODO: remove the assert
-   assert(mDspFactory != 0);
-   mDsp = mDspFactory->createDSPInstance();
-   mDsp->init(gSampleRate);
-
-   cachedPrograms[dspIndex] = writeInterpreterDSPFactoryToBitcode(mDspFactory);
+   CompileFaustDsp();
 }
 
 // TODO(Blake): Faust modules need to be initialized before we can say how much IO they have
@@ -101,15 +137,68 @@ bool FaustConnector::AcceptsPulses() { return false; }
 IDrawableModule* FaustConnector::Create()
 {
    FaustConnector* ret = new FaustConnector();
-   assert(ret->mDsp->getNumOutputs() <= FAUST_MAX_CHANNELS);
-   assert(ret->mDsp->getNumInputs() <= FAUST_MAX_CHANNELS);
+   if (ret->mDsp)
+   {
+      assert(ret->mDsp->getNumOutputs() <= FAUST_MAX_CHANNELS);
+      assert(ret->mDsp->getNumInputs() <= FAUST_MAX_CHANNELS);
+   }
    return ret;
 }
 
 void FaustConnector::CreateUIControls()
 {
    IDrawableModule::CreateUIControls();
-   mDsp->buildUserInterface(&mDspUi);
+
+   mDspEditorBox = new CodeEntry(this, "dsp_editor", 3, 100, 300, 300);
+}
+
+void FaustConnector::CompileFaustDsp()
+{
+   if (mDspFactory != nullptr)
+   {
+      deleteInterpreterDSPFactory(mDspFactory);
+   }
+
+   mDspFactory = createInterpreterDSPFactoryFromString("faustconnector", mDspString, mFaustFactoryArgv.size(), mFaustFactoryArgv.begin(), mFaustErrorStr);
+
+   // TODO: check `err` and display it on the module
+   // TODO: remove the assert
+   if (HasFaustError() == false)
+   {
+      interpreter_dsp* newDsp = mDspFactory->createDSPInstance();
+      newDsp->init(gSampleRate);
+      if (newDsp)
+      {
+         // QUESTION: is making sliders outside CreateUIControls bad?
+         if (mDsp)
+         {
+            assert(mDspUi);
+            delete mDsp;
+            delete mDspUi;
+            // TODO: how to reuse memory from mDspUi?
+            mDspUi = new FaustUI(this, this, this);
+         }
+         mDsp = newDsp;
+         mDsp->buildUserInterface(mDspUi);
+      }
+   }
+   else
+      HandleFaustError();
+}
+
+void FaustConnector::HandleFaustError()
+{
+   if (HasFaustError() == false)
+      return;
+
+   ofLog() << "Faust error:" << '\n'
+           << mFaustErrorStr;
+}
+
+bool FaustConnector::HasFaustError()
+{
+   bool hasError = mDspFactory == 0 && mFaustErrorStr != "";
+   return hasError;
 }
 
 bool FaustConnector::IsEnabled() const
@@ -119,15 +208,61 @@ bool FaustConnector::IsEnabled() const
 
 void FaustConnector::DrawModule()
 {
+   ofLog() << "DEBUGPRINT[1]: " << __FILE__ << ":" << __LINE__ << " (after void FaustConnector::DrawModule())";
    if (Minimized() || IsVisible() == false)
       return;
+   ofLog() << "DEBUGPRINT[2]: " << __FILE__ << ":" << __LINE__ << " (after return;)";
 
-   mDspUi.Impl_DrawControls();
+   mDspUi->Impl_DrawControls();
+   ofLog() << "DEBUGPRINT[3]: " << __FILE__ << ":" << __LINE__ << " (after mDspUi->Impl_DrawControls();)";
+
+   mDspEditorBox->SetShowing(mEditMode);
+   ofLog() << "DEBUGPRINT[5]: " << __FILE__ << ":" << __LINE__ << ": mEditMode=" << mEditMode;
+   if (mEditMode)
+   {
+      ofLog() << "DEBUGPRINT[6]: " << __FILE__ << ":" << __LINE__ << " (after if (mEditMode))";
+      mDspEditorBox->SetPosition(mDspUi->GetUiLeftEdgeOffset(), mDspUi->GetUiBottomEdgeOffset());
+      ofLog() << "DEBUGPRINT[7]: " << __FILE__ << ":" << __LINE__ << " (after mDspEditorBox->SetPosition(mDspUi->GetUi…)";
+
+      ofRectangle rect = mDspEditorBox->GetRect(K(local));
+      mWidth = MAX(mWidth, rect.x + rect.width + 3);
+      mHeight = rect.y + rect.height + 3;
+
+      mDspEditorBox->Draw();
+   }
+   ofLog() << "DEBUGPRINT[11]: " << __FILE__ << ":" << __LINE__ << " (after mDspEditorBox->Draw();)";
+}
+
+void FaustConnector::KeyPressed(int key, bool isRepeat)
+{
+   IDrawableModule::KeyPressed(key, isRepeat);
+
+   if (gHoveredModule == this)
+   {
+      if (key == OF_KEY_RETURN && GetKeyModifiers() == kModifier_Shift)
+      {
+         if (mEditMode == false)
+         {
+            mDspEditorBox->SetText(mDspString);
+            mDspEditorBox->ResetScroll();
+            IKeyboardFocusListener::SetActiveKeyboardFocus(mDspEditorBox);
+            mEditMode = true;
+         }
+      }
+   }
+}
+
+void FaustConnector::ExecuteCode()
+{
+   mDspString = mDspEditorBox->GetText(true);
+   CompileFaustDsp();
+   HandleFaustError();
+   mEditMode = false;
 }
 
 void FaustConnector::CheckboxUpdated(Checkbox* checkbox, double time)
 {
-   mDspUi.Impl_CheckboxUpdate(checkbox, time);
+   mDspUi->Impl_CheckboxUpdate(checkbox, time);
 }
 
 void FaustConnector::TextEntryComplete(TextEntry* entry)
@@ -144,9 +279,12 @@ void FaustConnector::Process(double time)
    if (target == nullptr)
       return;
 
+   if (mDsp == nullptr)
+      return;
+
    // TODO(Blake): decide if this is the best way to support the `enabled` button
    // IDEA: maybe we could do it with metadata attributes? (eg. have an attribute that says `disabledBehavior = bypass`)
-   if (!mEnabled)
+   if (!mEnabled || HasFaustError())
    {
       // Make the "enabled" button act as a bypass for faust programs that look like audio effects
       if (mDsp->getNumInputs() != 0 && GetBuffer()->NumActiveChannels() != 0)

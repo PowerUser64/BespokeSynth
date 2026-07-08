@@ -26,6 +26,7 @@
 #include "IDrawableModule.h"
 #include "IUIControl.h"
 #include "Slider.h"
+#include "SynthGlobals.h"
 #include "TextEntry.h"
 
 /** TODO:
@@ -40,6 +41,15 @@ FaustUI::FaustUI(IFloatSliderListener* parentFloatSliderListener, IDrawableModul
 , mParentFloatSliderListner(parentFloatSliderListener)
 , mParentTextEntryListener(parentTextEntryListener)
 {
+   ofLog() << "DEBUGPRINT[10]: " << __FILE__ << ":" << __LINE__ << " (after , mParentTextEntryListener(parentTextEnt…)";
+   // Move the cursor to its starting position
+   mCursorX = mUiOriginX + mElementPaddingX;
+   mCursorY = mUiOriginY + mElementPaddingY;
+}
+
+FaustUI::~FaustUI()
+{
+   ofLog() << "DEBUGPRINT[9]: " << __FILE__ << ":" << __LINE__ << " (after FaustUI::~FaustUI())";
 }
 
 void FaustUI::Impl_DrawControls()
@@ -60,6 +70,16 @@ void FaustUI::Impl_CheckboxUpdate(Checkbox* checkbox, double time)
             *mCheckboxFloats[i] = 0.0f;
       }
    }
+}
+
+int FaustUI::GetUiBottomEdgeOffset()
+{
+   return mCursorY;
+}
+
+int FaustUI::GetUiLeftEdgeOffset()
+{
+   return mElementPaddingX;
 }
 
 void FaustUI::UpdateCursorPos(int x, int y)

@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "CodeEntry.h"
 #include "IAudioProcessor.h"
 #include "TextEntry.h"
 #include "IDrawableModule.h"
@@ -42,7 +43,7 @@
 // TODO: check that the number of channels in the faust program is less than FAUST_MAX_CHANNELS (at compile time, in cmake)
 #define FAUST_MAX_CHANNELS 2
 
-class FaustConnector : public IAudioProcessor, public IDrawableModule, public ITextEntryListener, public IFloatSliderListener
+class FaustConnector : public IAudioProcessor, public IDrawableModule, public ITextEntryListener, public IFloatSliderListener, public ICodeEntryListener
 {
 public:
    // Module interface
@@ -60,6 +61,11 @@ public:
    void CheckboxUpdated(Checkbox* checkbox, double time) override;
    void TextEntryComplete(TextEntry* entry) override;
 
+   // UI: Editor
+   void KeyPressed(int key, bool isRepeat) override;
+   void ExecuteCode() override;
+   std::pair<int, int> ExecuteBlock(int lineStart, int lineEnd) override { return std::pair<int, int>(); }
+
    // Process
    void Process(double time) override;
    void SetEnabled(bool enabled) override;
@@ -69,12 +75,19 @@ private:
    std::array<float*, FAUST_MAX_CHANNELS> mInChannels = { 0 };
    std::array<float*, FAUST_MAX_CHANNELS> mOutChannels = { 0 };
 
-   interpreter_dsp* mDsp;
-   FaustUI mDspUi;
+   void CompileFaustDsp();
+   void HandleFaustError();
+   bool HasFaustError();
 
-   interpreter_dsp_factory* mDspFactory;
-   // TODO: watch a file instead
-   std::string mDspString;
+   interpreter_dsp* mDsp = 0;
+   FaustUI* mDspUi = 0;
+   CodeEntry* mDspEditorBox = 0;
+   bool mEditMode = false;
+
+   interpreter_dsp_factory* mDspFactory = 0;
+   std::string mNewDspString = "";
+   std::string mDspString = "";
+   std::string mFaustErrorStr = "";
 
    std::string mFaustLibPath;
    std::array<const char*, 2> mFaustFactoryArgv;
