@@ -38,9 +38,14 @@ class FaustUI : public UI
 public:
    // TODO: can this be just a single parameter?
    FaustUI(IFloatSliderListener* parentFloatSlider, IDrawableModule* parentDrawableModule, ITextEntryListener* parentTextEntryListener);
+   ~FaustUI();
 
    void Impl_DrawControls();
    void Impl_CheckboxUpdate(Checkbox* checkbox, double time);
+
+   void UpdateCursorPos(int x, int y);
+   int GetUiBottomEdgeOffset();
+   int GetUiLeftEdgeOffset();
 
    // -- widget layouts
 
@@ -67,8 +72,6 @@ public:
    void addSoundfile(const char* label, const char* filename, Soundfile** sf_zone) override { }
 
 private:
-   void UpdateCursorPos(int x, int y);
-
    std::vector<IUIControl*> mControls;
    std::vector<TextEntry*> mTextEntries;
    std::vector<Checkbox*> mCheckboxes;
@@ -89,9 +92,13 @@ private:
    const int mElementPaddingX = 5;
    const int mElementPaddingY = 2;
 
+   // the top-left of the UI
+   const int mUiOriginX = 0;
+   const int mUiOriginY = 0;
+
    // the "cursor" is where we'll place the next element
-   int mCursorX = mElementPaddingX;
-   int mCursorY = mElementPaddingY;
+   int mCursorX = 0;
+   int mCursorY = 0;
 
    int mModuleSizeX = 100;
    int mModuleSizeY = 5;
