@@ -618,7 +618,7 @@ target_sources(BespokeSynth PRIVATE
     QwertyController.h
     QwertyToPitchMapping.cpp
     QwertyToPitchMapping.h
-    RtDoubleBuffer.h
+    PoliteDoubleBuffer.h
     RadioButton.cpp
     RadioButton.h
     RadioSequencer.cpp
