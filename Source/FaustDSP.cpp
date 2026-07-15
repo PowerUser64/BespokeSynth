@@ -60,6 +60,29 @@ FaustDSP::FaustDSP(std::string dspString)
    UpdateDsp(dspString);
 }
 
+FaustDSP::FaustDSP(const FaustDSP& other)
+: mDspString(other.mDspString)
+, mFaustErrorStr(other.mFaustErrorStr)
+{
+   UpdateDsp(mDspString);
+}
+
+FaustDSP& FaustDSP::operator=(const FaustDSP& other)
+{
+   if (this != &other)
+   {
+      delete mDsp;
+      mDsp = 0;
+      deleteInterpreterDSPFactory(mDspFactory);
+      mDspFactory = 0;
+
+      mDspString = other.mDspString;
+      mFaustErrorStr = other.mFaustErrorStr;
+
+      UpdateDsp(mDspString);
+   }
+   return *this;
+}
 
 void FaustDSP::UpdateDsp(std::string dspString)
 {
@@ -76,6 +99,7 @@ void FaustDSP::UpdateDsp(std::string dspString)
    //    mDsp = 0;
    // }
 
+   mDspString = dspString;
    mDspFactory = createInterpreterDSPFactoryFromString("FaustDSP", mDspString, mFaustFactoryArgv.size(), mFaustFactoryArgv.begin(), mFaustErrorStr);
 
    // TODO: check `err` and display it on the module
@@ -90,10 +114,10 @@ void FaustDSP::UpdateDsp(std::string dspString)
 
 bool FaustDSP::HasError()
 {
-   bool hasFactory = mDspFactory == 0;
+   bool hasNoFactory = mDspFactory == 0;
    bool hasFaustError = mFaustErrorStr != "";
 
-   bool ret = hasFactory && (hasFaustError == false);
+   bool ret = hasNoFactory || hasFaustError;
 
    return ret;
 }
