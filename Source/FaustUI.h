@@ -20,18 +20,14 @@
 // FaustUI.h
 //
 
+#pragma once
+
 #include <vector>
 #include "Checkbox.h"
-#include "ClickButton.h"
 #include "IDrawableModule.h"
 #include "Slider.h"
 #include "TextEntry.h"
 #include "faust/gui/UI.h"
-
-// TODO:
-// - pass owner in initializer
-// - NOT an IFloatSliderListener
-// - FaustConnector is an IFloatSliderListener
 
 class FaustUI : public UI
 {
@@ -39,6 +35,9 @@ public:
    // TODO: can this be just a single parameter?
    FaustUI(IFloatSliderListener* parentFloatSlider, IDrawableModule* parentDrawableModule, ITextEntryListener* parentTextEntryListener);
    ~FaustUI();
+
+   void UiConstructionBegin();
+   void UiConstructionComplete();
 
    void Impl_DrawControls();
    void Impl_CheckboxUpdate(Checkbox* checkbox, double time);
@@ -72,12 +71,34 @@ public:
    void addSoundfile(const char* label, const char* filename, Soundfile** sf_zone) override { }
 
 private:
-   std::vector<IUIControl*> mControls;
-   std::vector<TextEntry*> mTextEntries;
-   std::vector<Checkbox*> mCheckboxes;
-   std::vector<bool*> mCheckboxBools;
-   std::vector<float*> mCheckboxFloats;
-   std::vector<float*> mButtonFloats;
+   enum FaustControlType
+   {
+      BUTTON,
+      CHECKBOX,
+      HSLIDER,
+      VSLIDER,
+      NUMENTRY
+   };
+   bool FreshenUiControl(const char* name, FaustControlType type);
+
+   template <typename T>
+   struct UiMeta
+   {
+      UiMeta(int mUiGeneration, T val)
+      : generation(mUiGeneration)
+      , ptr(val)
+      { }
+      int generation = -1;
+      T ptr = 0;
+   };
+
+   int mUiGeneration = -1;
+   std::vector<UiMeta<TextEntry*>> mTextEntries;
+   std::vector<UiMeta<Checkbox*>> mCheckboxes;
+   std::vector<UiMeta<FloatSlider*>> mSliders;
+   std::vector<UiMeta<bool*>> mCheckboxBools;
+   std::vector<UiMeta<float*>> mCheckboxFloats;
+   std::vector<UiMeta<float*>> mButtonFloats;
 
    int mRowWidth = 100;
    int mRowHeight = 15;

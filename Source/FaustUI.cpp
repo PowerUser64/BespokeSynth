@@ -22,12 +22,12 @@
 
 #include "FaustUI.h"
 #include "Checkbox.h"
-#include "ClickButton.h"
 #include "IDrawableModule.h"
-#include "IUIControl.h"
 #include "Slider.h"
 #include "SynthGlobals.h"
 #include "TextEntry.h"
+#include <cstring>
+#include <sys/poll.h>
 
 /** TODO:
  * - slider quantization (int)
@@ -41,7 +41,6 @@ FaustUI::FaustUI(IFloatSliderListener* parentFloatSliderListener, IDrawableModul
 , mParentFloatSliderListner(parentFloatSliderListener)
 , mParentTextEntryListener(parentTextEntryListener)
 {
-   ofLog() << "DEBUGPRINT[10]: " << __FILE__ << ":" << __LINE__ << " (after , mParentTextEntryListener(parentTextEnt…)";
    // Move the cursor to its starting position
    mCursorX = mUiOriginX + mElementPaddingX;
    mCursorY = mUiOriginY + mElementPaddingY;
@@ -49,25 +48,28 @@ FaustUI::FaustUI(IFloatSliderListener* parentFloatSliderListener, IDrawableModul
 
 FaustUI::~FaustUI()
 {
-   ofLog() << "DEBUGPRINT[9]: " << __FILE__ << ":" << __LINE__ << " (after FaustUI::~FaustUI())";
 }
 
 void FaustUI::Impl_DrawControls()
 {
-   for (auto& control : mControls)
-      control->Draw();
+   for (auto& control : mTextEntries)
+      control.ptr->Draw();
+   for (auto& control : mSliders)
+      control.ptr->Draw();
+   for (auto& control : mCheckboxes)
+      control.ptr->Draw();
 }
 
 void FaustUI::Impl_CheckboxUpdate(Checkbox* checkbox, double time)
 {
    for (int i = 0; i < mCheckboxes.size(); ++i)
    {
-      if (checkbox == mCheckboxes[i])
+      if (checkbox == mCheckboxes[i].ptr)
       {
-         if (*mCheckboxBools[i])
-            *mCheckboxFloats[i] = 1.0f;
+         if (*mCheckboxBools[i].ptr)
+            *mCheckboxFloats[i].ptr = 1.0f;
          else
-            *mCheckboxFloats[i] = 0.0f;
+            *mCheckboxFloats[i].ptr = 0.0f;
       }
    }
 }
@@ -95,43 +97,110 @@ void FaustUI::UpdateCursorPos(int x, int y)
    mParentDrawableModule->Resize(mModuleSizeX, mModuleSizeY);
 }
 
+// take note of any controls we have, so we can diff it against the new list
+void FaustUI::UiConstructionBegin()
+{
+   mUiGeneration += 1;
+}
+
+#define FILTER_CURRENT_GEN_UI_LIST(list)       \
+   for (auto& control : list)                  \
+   {                                           \
+      if (control.generation != mUiGeneration) \
+      {                                        \
+         control.ptr->Delete();                \
+         control.ptr = 0;                      \
+      }                                        \
+   }
+
+// TODO: swap with the end of the list
+#define FILTER_CURRENT_GEN_UI_PARAM_LIST(list) \
+   for (auto& control : list)                  \
+   {                                           \
+      if (control.generation != mUiGeneration) \
+      {                                        \
+         delete control.ptr;                   \
+         control.ptr = 0;                      \
+      }                                        \
+   }
+
+// find any controls that don't exist any more and clean them up
+void FaustUI::UiConstructionComplete(){
+   // delete old controls
+   FILTER_CURRENT_GEN_UI_LIST(mTextEntries)
+   FILTER_CURRENT_GEN_UI_LIST(mCheckboxes)
+   FILTER_CURRENT_GEN_UI_LIST(mSliders)
+   FILTER_CURRENT_GEN_UI_PARAM_LIST(mCheckboxBools)
+   FILTER_CURRENT_GEN_UI_PARAM_LIST(mCheckboxFloats)
+   FILTER_CURRENT_GEN_UI_PARAM_LIST(mButtonFloats)
+}
+
+#define TRY_EXISTING_CONTROL(found, label, controls)   \
+   for (auto& control : controls)                      \
+      if (strncmp(control.ptr->Name(), label, 100))    \
+      {                                                \
+         found = true;                                 \
+         control.generation = mUiGeneration;           \
+         control.ptr->SetPosition(mCursorX, mCursorY); \
+         break;                                        \
+      }
+
 // -- active widgets
 
 void FaustUI::addButton(const char* label, float* zone)
 {
-   // buttons in bespoke are events, but faust doesn't have any notion of an
+   // faust buttons map nicely to bespoke checkboxes
    addCheckButton(label, zone);
-}
-
-void FaustUI::addCheckButton(const char* label, float* zone)
-{
-   bool* checkboxBool = new bool(false);
-   Checkbox* checkbox = new Checkbox(mParentDrawableModule, label, mCursorX, mCursorY, checkboxBool);
-
-   mCheckboxFloats.push_back(zone);
-   mCheckboxBools.push_back(checkboxBool);
-
-   mCheckboxes.push_back(checkbox);
-   mControls.push_back(checkbox);
-
-   UpdateCursorPos(mCheckboxSizeX, mCheckboxSizeY);
 }
 void FaustUI::addVerticalSlider(const char* label, float* zone, float init, float min, float max, float step)
 {
    // redirect to hslider
    addHorizontalSlider(label, zone, init, min, max, step);
 }
+
+void FaustUI::addCheckButton(const char* label, float* zone)
+{
+   bool foundOld = false;
+   TRY_EXISTING_CONTROL(foundOld, label, mCheckboxes)
+
+   if (!foundOld)
+   {
+      UiMeta<bool*> newBool(mUiGeneration, new bool(false));
+      UiMeta<Checkbox*> checkbox(mUiGeneration, new Checkbox(mParentDrawableModule, label, mCursorX, mCursorY, newBool.ptr));
+
+      mCheckboxFloats.push_back(UiMeta<float*>(mUiGeneration, zone));
+      mCheckboxBools.push_back(newBool);
+
+      mCheckboxes.push_back(checkbox);
+   }
+
+   UpdateCursorPos(mCheckboxSizeX, mCheckboxSizeY);
+}
 void FaustUI::addHorizontalSlider(const char* label, float* zone, float init, float min, float max, float step)
 {
-   mControls.push_back(new FloatSlider(mParentFloatSliderListner, label, mCursorX, mCursorY, mSliderSizeX, mSliderSizeY, zone, min, max));
+   bool foundOld = false;
+   TRY_EXISTING_CONTROL(foundOld, label, mCheckboxes)
+
+   if (!foundOld)
+   {
+      FloatSlider* slider = new FloatSlider(mParentFloatSliderListner, label, mCursorX, mCursorY, mSliderSizeX, mSliderSizeY, zone, min, max);
+
+      mSliders.push_back(UiMeta<FloatSlider*>(mUiGeneration, slider));
+   }
+
    UpdateCursorPos(mSliderSizeX, mSliderSizeY);
 }
 void FaustUI::addNumEntry(const char* label, float* zone, float init, float min, float max, float step)
 {
-   TextEntry* textentry = new TextEntry(mParentTextEntryListener, label, mCursorX, mCursorY, 5, zone, min, max);
+   bool foundOld = false;
+   TRY_EXISTING_CONTROL(foundOld, label, mCheckboxes)
 
-   mTextEntries.push_back(textentry);
-   mControls.push_back(textentry);
+   if (!foundOld)
+   {
+      UiMeta<TextEntry*> textentry(mUiGeneration, new TextEntry(mParentTextEntryListener, label, mCursorX, mCursorY, 5, zone, min, max));
+
+      mTextEntries.push_back(textentry);
+   }
 
    UpdateCursorPos(mTextEntrySizeX, mTextEntrySizeY);
 }
@@ -140,3 +209,5 @@ void FaustUI::addNumEntry(const char* label, float* zone, float init, float min,
 
 void FaustUI::addHorizontalBargraph(const char* label, float* zone, float min, float max) { }
 void FaustUI::addVerticalBargraph(const char* label, float* zone, float min, float max) { }
+
+#undef TRY_EXISTING_CONTROL
