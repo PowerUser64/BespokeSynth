@@ -17,7 +17,7 @@
 **/
 
 //
-// RtDoubleBuffer.h
+// PoliteDoubleBuffer.h
 //
 
 
@@ -28,12 +28,12 @@
 #include <atomic>
 
 template <typename T>
-class RtDoubleBuffer
+class PoliteDoubleBuffer
 {
    typedef unsigned char Byte;
 
 public:
-   RtDoubleBuffer(T current, T other)
+   PoliteDoubleBuffer(T current, T other)
    : mDoubleBuffer{ current, other }
    { }
 
@@ -45,13 +45,15 @@ public:
    // (NOTE: this function assumes it isn't called from more than one thread)
    inline void SwitchWhenReady()
    {
+      assert(!IsAudioThread());
       EnsureNotWaitingForSwitch();
       mBitFlags.fetch_or(mSwitchReadyFlag, std::memory_order_release);
    }
    // Get the buffer that isn't in front (NOTE: call ONLY from the non-audio thread)
    // (NOTE: this function assumes it isn't called from more than one thread)
-   inline T& GetOther()
+   inline T& GetBackBuffer()
    {
+      assert(!IsAudioThread());
       EnsureNotWaitingForSwitch();
       return mDoubleBuffer[!GetIndex()];
    }
@@ -62,10 +64,15 @@ public:
    //
 
    // Get current buffer (NOTE: call ONLY from audio thread)
-   inline T& GetCurrent() { return mDoubleBuffer[GetIndex()]; }
+   inline T& GetFrontBuffer()
+   {
+      assert(IsAudioThread());
+      return mDoubleBuffer[GetIndex()];
+   }
    // Switch buffers if we should (NOTE: call ONLY from audio thread)
    inline void SwitchBuffersIfNeeded()
    {
+      assert(IsAudioThread());
       if (ShouldSwitch())
       {
          // flip index

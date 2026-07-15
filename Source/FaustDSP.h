@@ -25,7 +25,7 @@
 // TODO(Blake): cleanup unused includes once factoring FaustDSP out of FaustConnector is done
 
 #include "IAudioProcessor.h"
-#include "RtDoubleBuffer.h"
+#include "PoliteDoubleBuffer.h"
 #include <array>
 #include "faust/dsp/interpreter-dsp.h"
 
@@ -96,4 +96,4 @@ private:
 const FaustDSP& gFaustDefaultProgram();
 
 // Helper class for switching between the two DSP's
-typedef RtDoubleBuffer<FaustDSP> DspPair;
+typedef PoliteDoubleBuffer<FaustDSP> DspPair;

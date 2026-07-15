@@ -49,11 +49,11 @@ bool FaustConnector::AcceptsPulses() { return false; }
 IDrawableModule* FaustConnector::Create()
 {
    FaustConnector* ret = new FaustConnector();
-   if (ret->mDspDoubleBuf.GetCurrent().IsReady())
+   if (ret->mDspDoubleBuf.GetFrontBuffer().IsReady())
    {
       // TODO: when error messages are implemented, report these as errors in the UI:
-      assert(ret->mDspDoubleBuf.GetCurrent().GetNumOutputs() <= FAUST_MAX_CHANNELS);
-      assert(ret->mDspDoubleBuf.GetCurrent().GetNumInputs() <= FAUST_MAX_CHANNELS);
+      assert(ret->mDspDoubleBuf.GetFrontBuffer().GetNumOutputs() <= FAUST_MAX_CHANNELS);
+      assert(ret->mDspDoubleBuf.GetFrontBuffer().GetNumInputs() <= FAUST_MAX_CHANNELS);
    }
    return ret;
 }
@@ -69,18 +69,18 @@ void FaustConnector::CreateUIControls()
 
 void FaustConnector::UpdateDspFromEditorBox()
 {
-   mDspDoubleBuf.GetOther().UpdateDsp(mDspEditorBox->GetText(true));
-   if (mDspDoubleBuf.GetOther().IsReady() == true)
+   mDspDoubleBuf.GetBackBuffer().UpdateDsp(mDspEditorBox->GetText(true));
+   if (mDspDoubleBuf.GetBackBuffer().IsReady() == true)
    {
       mEditMode = false;
-      mDspDoubleBuf.GetOther().BuildUserInterface(&mDspUi);
+      mDspDoubleBuf.GetBackBuffer().BuildUserInterface(&mDspUi);
       mDspDoubleBuf.SwitchWhenReady();
    }
 }
 
 void FaustConnector::HandleFaustError()
 {
-   if (mDspDoubleBuf.GetCurrent().IsReady() == false)
+   if (mDspDoubleBuf.GetFrontBuffer().IsReady() == false)
       return;
 
    ofLog() << "Faust error:" << '\n'
@@ -127,7 +127,7 @@ void FaustConnector::KeyPressed(int key, bool isRepeat)
       {
          if (mEditMode == false)
          {
-            mDspEditorBox->SetText(mDspDoubleBuf.GetCurrent().GetDspString());
+            mDspEditorBox->SetText(mDspDoubleBuf.GetBackBuffer().GetDspString());
             mDspEditorBox->ResetScroll();
             IKeyboardFocusListener::SetActiveKeyboardFocus(mDspEditorBox);
             mEditMode = true;
@@ -168,10 +168,10 @@ void FaustConnector::Process(double time)
 
    // TODO(Blake): decide if this is the best way to support the `enabled` button
    // IDEA: maybe we could do it with metadata attributes? (eg. have an attribute that says `disabledBehavior = bypass`)
-   if (!mEnabled || !mDspDoubleBuf.GetCurrent().IsReady())
+   if (!mEnabled || !mDspDoubleBuf.GetFrontBuffer().IsReady())
    {
       // Make the "enabled" button act as a bypass for faust programs that look like audio effects
-      if (mDspDoubleBuf.GetCurrent().GetNumInputs() != 0 && GetBuffer()->NumActiveChannels() != 0)
+      if (mDspDoubleBuf.GetFrontBuffer().GetNumInputs() != 0 && GetBuffer()->NumActiveChannels() != 0)
       {
          SyncBuffers();
          for (int ch = 0; ch < GetBuffer()->NumActiveChannels(); ++ch)
@@ -187,14 +187,14 @@ void FaustConnector::Process(double time)
 
    { // setup faust buffers
       { // sync IO count
-         int buf_count = MAX(mDspDoubleBuf.GetCurrent().GetNumInputs(), mDspDoubleBuf.GetCurrent().GetNumOutputs());
+         int buf_count = MAX(mDspDoubleBuf.GetFrontBuffer().GetNumInputs(), mDspDoubleBuf.GetFrontBuffer().GetNumOutputs());
          SyncBuffers(buf_count);
       }
 
       { // input
          // enable to use the zero buffer for remaining mismatched channels
          int last_module_ch = MIN(FAUST_MAX_CHANNELS, GetBuffer()->NumActiveChannels());
-         int last_dsp_ch = MIN(FAUST_MAX_CHANNELS, mDspDoubleBuf.GetCurrent().GetNumInputs());
+         int last_dsp_ch = MIN(FAUST_MAX_CHANNELS, mDspDoubleBuf.GetFrontBuffer().GetNumInputs());
          for (int ch = 0; ch < last_dsp_ch; ++ch)
          {
             if (ch < last_module_ch)
@@ -205,7 +205,7 @@ void FaustConnector::Process(double time)
       }
 
       { // output
-         int last_ch = MIN(mDspDoubleBuf.GetCurrent().GetNumOutputs(), MIN(FAUST_MAX_CHANNELS, target->GetBuffer()->NumActiveChannels()));
+         int last_ch = MIN(mDspDoubleBuf.GetFrontBuffer().GetNumOutputs(), MIN(FAUST_MAX_CHANNELS, target->GetBuffer()->NumActiveChannels()));
 
          gWorkChannelBuffer.SetNumActiveChannels(last_ch);
 
@@ -215,13 +215,13 @@ void FaustConnector::Process(double time)
          }
 
          {
-            if (target->GetBuffer()->NumActiveChannels() != mDspDoubleBuf.GetCurrent().GetNumOutputs())
+            if (target->GetBuffer()->NumActiveChannels() != mDspDoubleBuf.GetFrontBuffer().GetNumOutputs())
                return;
          }
       }
    }
 
-   mDspDoubleBuf.GetCurrent().Process(time, mInChannels, mOutChannels);
+   mDspDoubleBuf.GetFrontBuffer().Process(time, mInChannels, mOutChannels);
 
    // copy to viz buffer
    for (int ch = 0; ch < gWorkChannelBuffer.NumActiveChannels(); ++ch)
