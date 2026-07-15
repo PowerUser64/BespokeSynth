@@ -23,110 +23,22 @@
 #include "FaustConnector.h"
 
 #include "ChannelBuffer.h"
+#include "FaustDSP.h"
 #include "IAudioReceiver.h"
 #include "ModularSynth.h" // save/load
 #include "OpenFrameworksPort.h"
 #include "Profiler.h" // profiling
 #include "SynthGlobals.h"
-#include "faust/dsp/interpreter-dsp.h"
 #include <cassert>
-#include <string>
 
-FaustConnector::~FaustConnector()
-{
-   delete mDsp;
-};
-
-// QUESTION:
-// - how to deduplicate DSP's when editing? should we?
-// - I think we shouldn't, and instead we should have save/load buttons
-
-// DEMO
-int dspIndex = -1;
-
-// filesystem
-std::vector<std::string> programs = {
-   // error.dsp
-   // R"(process = _)",
-   // sine-advanced-stereo-params.dsp
-   R"(import("stdfaust.lib");)"
-   "\n"
-   R"(f = hslider("freq", 220, 55, 880, 0.01);)"
-   "\n"
-   R"(process = ((_ + 1) * os.osc(f)) * 0.5,)"
-   "\n"
-   R"(          ((_ + 1) * os.osc(f)))"
-   "\n"
-   R"(          : _ * 1/2,)"
-   "\n"
-   R"(            _ * 1/2;)",
-   // panning-sine.dsp
-   R"(import("stdfaust.lib");)"
-   "\n"
-   R"(lfo = os.osc(2);)"
-   "\n"
-   R"(lfo2 = cos(os.sawtooth(1)/2+1);)"
-   "\n"
-   R"(sig = os.osc(220);)"
-   "\n"
-   R"(process = sig * lfo2, sig * lfo;)",
-   // add-params.dsp
-   R"(s0 = hslider("s0", 0, -1, 1, 0.01);)"
-   "\n"
-   R"(s1 = hslider("s1", 0, -1, 1, 0.01);)"
-   "\n"
-   R"(s2 = hslider("s2", 0, -1, 1, 0.01);)"
-   "\n"
-   R"(s3 = hslider("s3", 0, -1, 1, 0.01);)"
-   "\n"
-   R"(s4 = hslider("s4", 0, -1, 1, 0.01);)"
-   "\n"
-   R"(s5 = hslider("s5", 0, -1, 1, 0.01);)"
-   "\n"
-   R"(s6 = hslider("s6", 0, -1, 1, 0.01); )"
-   "\n"
-   R"(s7 = hslider("s7", 0, -1, 1, 0.01); )"
-   "\n"
-   R"(s8 = hslider("s8", 0, -1, 1, 0.01); )"
-   "\n"
-   R"(s9 = hslider("s9", 0, -1, 1, 0.01); )"
-   "\n"
-   R"(add = _ + s0 + s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8 + s9; )"
-   "\n"
-   R"(process = add, add;)",
-   // all-ui-elements.dsp
-   R"(import("stdfaust.lib"); )"
-   "\n"
-   R"(b = button("button"); )"
-   "\n"
-   R"(c = checkbox("checkbox"); )"
-   "\n"
-   R"(s = hslider("hslider", 0, 0, 1, 0.1); )"
-   "\n"
-   R"(S = vslider("vslider", 0, 0, 1, 0.1); )"
-   "\n"
-   R"(n = nentry("numentry", 0, 0, 1, 0.1); )"
-   "\n"
-   R"(g = hbargraph("hbargraph", -1, 1); )"
-   "\n"
-   R"(G = vbargraph("vbargraph", -1, 1); )"
-   "\n"
-   R"(all = b*c*s*S*n : g : G; )"
-   "\n"
-   R"(process = _ * all, _ * all;)",
-};
+FaustConnector::~FaustConnector() { };
 
 FaustConnector::FaustConnector()
 : IAudioProcessor(gBufferSize)
 , IDrawableModule(120, 10)
-, mDspUi(new FaustUI(this, this, this))
-, mFaustLibPath(ofToDataPath("scripts/faust/_stdlib"))
-, mFaustFactoryArgv({ "-I", mFaustLibPath.c_str() })
+, mDspDoubleBuf(FaustDSP("process = _, _;"), FaustDSP("process = _, _;"))
+, mDspUi(this, this, this)
 {
-   dspIndex = (dspIndex + 1) % programs.size();
-   mDspString = programs[dspIndex];
-
-   CompileFaustDsp();
 }
 
 // TODO(Blake): Faust modules need to be initialized before we can say how much IO they have
@@ -137,10 +49,10 @@ bool FaustConnector::AcceptsPulses() { return false; }
 IDrawableModule* FaustConnector::Create()
 {
    FaustConnector* ret = new FaustConnector();
-   if (ret->mDsp)
+   if (ret->mDspDoubleBuf.GetCurrent().IsReady())
    {
-      assert(ret->mDsp->getNumOutputs() <= FAUST_MAX_CHANNELS);
-      assert(ret->mDsp->getNumInputs() <= FAUST_MAX_CHANNELS);
+      assert(ret->mDspDoubleBuf.GetCurrent().GetNumOutputs() <= FAUST_MAX_CHANNELS);
+      assert(ret->mDspDoubleBuf.GetCurrent().GetNumInputs() <= FAUST_MAX_CHANNELS);
    }
    return ret;
 }
@@ -149,56 +61,29 @@ void FaustConnector::CreateUIControls()
 {
    IDrawableModule::CreateUIControls();
 
-   mDspEditorBox = new CodeEntry(this, "dsp_editor", 3, 100, 300, 300);
+   mDspEditorBox = new CodeEntry(this, "__dsp_editor", 3, 100, 300, 300);
+
+   UpdateDspFromEditorBox();
 }
 
-void FaustConnector::CompileFaustDsp()
+void FaustConnector::UpdateDspFromEditorBox()
 {
-   if (mDspFactory != nullptr)
+   mDspDoubleBuf.GetOther().UpdateDsp(mDspEditorBox->GetText(true));
+   if (mDspDoubleBuf.GetOther().IsReady() == true)
    {
-      deleteInterpreterDSPFactory(mDspFactory);
+      mEditMode = false;
+      mDspDoubleBuf.GetOther().BuildUserInterface(&mDspUi);
+      mDspDoubleBuf.SwitchWhenReady();
    }
-
-   mDspFactory = createInterpreterDSPFactoryFromString("faustconnector", mDspString, mFaustFactoryArgv.size(), mFaustFactoryArgv.begin(), mFaustErrorStr);
-
-   // TODO: check `err` and display it on the module
-   // TODO: remove the assert
-   if (HasFaustError() == false)
-   {
-      interpreter_dsp* newDsp = mDspFactory->createDSPInstance();
-      newDsp->init(gSampleRate);
-      if (newDsp)
-      {
-         // QUESTION: is making sliders outside CreateUIControls bad?
-         if (mDsp)
-         {
-            assert(mDspUi);
-            delete mDsp;
-            delete mDspUi;
-            // TODO: how to reuse memory from mDspUi?
-            mDspUi = new FaustUI(this, this, this);
-         }
-         mDsp = newDsp;
-         mDsp->buildUserInterface(mDspUi);
-      }
-   }
-   else
-      HandleFaustError();
 }
 
 void FaustConnector::HandleFaustError()
 {
-   if (HasFaustError() == false)
+   if (mDspDoubleBuf.GetCurrent().IsReady() == false)
       return;
 
    ofLog() << "Faust error:" << '\n'
            << mFaustErrorStr;
-}
-
-bool FaustConnector::HasFaustError()
-{
-   bool hasError = mDspFactory == 0 && mFaustErrorStr != "";
-   return hasError;
 }
 
 bool FaustConnector::IsEnabled() const
@@ -206,23 +91,22 @@ bool FaustConnector::IsEnabled() const
    return mEnabled;
 }
 
+void FaustConnector::SetEnabled(bool enabled)
+{
+   mEnabled = enabled;
+}
+
 void FaustConnector::DrawModule()
 {
-   ofLog() << "DEBUGPRINT[1]: " << __FILE__ << ":" << __LINE__ << " (after void FaustConnector::DrawModule())";
    if (Minimized() || IsVisible() == false)
       return;
-   ofLog() << "DEBUGPRINT[2]: " << __FILE__ << ":" << __LINE__ << " (after return;)";
 
-   mDspUi->Impl_DrawControls();
-   ofLog() << "DEBUGPRINT[3]: " << __FILE__ << ":" << __LINE__ << " (after mDspUi->Impl_DrawControls();)";
+   mDspUi.Impl_DrawControls();
 
    mDspEditorBox->SetShowing(mEditMode);
-   ofLog() << "DEBUGPRINT[5]: " << __FILE__ << ":" << __LINE__ << ": mEditMode=" << mEditMode;
    if (mEditMode)
    {
-      ofLog() << "DEBUGPRINT[6]: " << __FILE__ << ":" << __LINE__ << " (after if (mEditMode))";
-      mDspEditorBox->SetPosition(mDspUi->GetUiLeftEdgeOffset(), mDspUi->GetUiBottomEdgeOffset());
-      ofLog() << "DEBUGPRINT[7]: " << __FILE__ << ":" << __LINE__ << " (after mDspEditorBox->SetPosition(mDspUi->GetUi…)";
+      mDspEditorBox->SetPosition(mDspUi.GetUiLeftEdgeOffset(), mDspUi.GetUiBottomEdgeOffset());
 
       ofRectangle rect = mDspEditorBox->GetRect(K(local));
       mWidth = MAX(mWidth, rect.x + rect.width + 3);
@@ -230,7 +114,6 @@ void FaustConnector::DrawModule()
 
       mDspEditorBox->Draw();
    }
-   ofLog() << "DEBUGPRINT[11]: " << __FILE__ << ":" << __LINE__ << " (after mDspEditorBox->Draw();)";
 }
 
 void FaustConnector::KeyPressed(int key, bool isRepeat)
@@ -239,11 +122,11 @@ void FaustConnector::KeyPressed(int key, bool isRepeat)
 
    if (gHoveredModule == this)
    {
-      if (key == OF_KEY_RETURN && GetKeyModifiers() == kModifier_Shift)
+      if (key == 'e' && GetKeyModifiers() == kModifier_Command)
       {
          if (mEditMode == false)
          {
-            mDspEditorBox->SetText(mDspString);
+            mDspEditorBox->SetText(mDspDoubleBuf.GetCurrent().GetDspString());
             mDspEditorBox->ResetScroll();
             IKeyboardFocusListener::SetActiveKeyboardFocus(mDspEditorBox);
             mEditMode = true;
@@ -254,15 +137,15 @@ void FaustConnector::KeyPressed(int key, bool isRepeat)
 
 void FaustConnector::ExecuteCode()
 {
-   mDspString = mDspEditorBox->GetText(true);
-   CompileFaustDsp();
-   HandleFaustError();
-   mEditMode = false;
+   if (mEditMode == false)
+      return;
+
+   UpdateDspFromEditorBox();
 }
 
 void FaustConnector::CheckboxUpdated(Checkbox* checkbox, double time)
 {
-   mDspUi->Impl_CheckboxUpdate(checkbox, time);
+   mDspUi.Impl_CheckboxUpdate(checkbox, time);
 }
 
 void FaustConnector::TextEntryComplete(TextEntry* entry)
@@ -279,15 +162,15 @@ void FaustConnector::Process(double time)
    if (target == nullptr)
       return;
 
-   if (mDsp == nullptr)
-      return;
+   // before first reference to mDsp
+   mDspDoubleBuf.SwitchBuffersIfNeeded();
 
    // TODO(Blake): decide if this is the best way to support the `enabled` button
    // IDEA: maybe we could do it with metadata attributes? (eg. have an attribute that says `disabledBehavior = bypass`)
-   if (!mEnabled || HasFaustError())
+   if (!mEnabled || mDspDoubleBuf.GetCurrent().IsReady())
    {
       // Make the "enabled" button act as a bypass for faust programs that look like audio effects
-      if (mDsp->getNumInputs() != 0 && GetBuffer()->NumActiveChannels() != 0)
+      if (mDspDoubleBuf.GetCurrent().GetNumInputs() != 0 && GetBuffer()->NumActiveChannels() != 0)
       {
          SyncBuffers();
          for (int ch = 0; ch < GetBuffer()->NumActiveChannels(); ++ch)
@@ -301,46 +184,45 @@ void FaustConnector::Process(double time)
       return;
    }
 
-   int buf_count = MAX(mDsp->getNumInputs(), mDsp->getNumOutputs());
-   SyncBuffers(buf_count);
+   { // setup faust buffers
+      { // sync IO count
+         int buf_count = MAX(mDspDoubleBuf.GetCurrent().GetNumInputs(), mDspDoubleBuf.GetCurrent().GetNumOutputs());
+         SyncBuffers(buf_count);
+      }
 
-   if (mDsp->getNumInputs() == 0 || GetBuffer()->NumActiveChannels() == 0)
-   {
-      mInChannels = { gZeroBuffer, gZeroBuffer };
-   }
-   else
-   {
-      // enable to use the zero buffer for remaining mismatched channels
-      int last_module_ch = MIN(FAUST_MAX_CHANNELS, GetBuffer()->NumActiveChannels());
-      int last_dsp_ch = MIN(FAUST_MAX_CHANNELS, mDsp->getNumInputs());
-      for (int ch = 0; ch < last_dsp_ch; ++ch)
-      {
-         if (ch < last_module_ch)
-            mInChannels[ch] = GetBuffer()->GetChannel(ch);
-         else
-            mInChannels[ch] = gZeroBuffer;
+      { // input
+         // enable to use the zero buffer for remaining mismatched channels
+         int last_module_ch = MIN(FAUST_MAX_CHANNELS, GetBuffer()->NumActiveChannels());
+         int last_dsp_ch = MIN(FAUST_MAX_CHANNELS, mDspDoubleBuf.GetCurrent().GetNumInputs());
+         for (int ch = 0; ch < last_dsp_ch; ++ch)
+         {
+            if (ch < last_module_ch)
+               mInChannels[ch] = GetBuffer()->GetChannel(ch);
+            else
+               mInChannels[ch] = gZeroBuffer;
+         }
+      }
+
+      { // output
+         int last_ch = MIN(mDspDoubleBuf.GetCurrent().GetNumOutputs(), MIN(FAUST_MAX_CHANNELS, target->GetBuffer()->NumActiveChannels()));
+
+         gWorkChannelBuffer.SetNumActiveChannels(last_ch);
+
+         for (int ch = 0; ch < last_ch; ++ch)
+         {
+            mOutChannels[ch] = gWorkChannelBuffer.GetChannel(ch);
+         }
+
+         {
+            if (target->GetBuffer()->NumActiveChannels() != mDspDoubleBuf.GetCurrent().GetNumOutputs())
+               return;
+         }
       }
    }
 
+   mDspDoubleBuf.GetCurrent().Process(time, mInChannels, mOutChannels);
 
-   {
-      int last_ch = MIN(mDsp->getNumOutputs(), MIN(FAUST_MAX_CHANNELS, target->GetBuffer()->NumActiveChannels()));
-
-      gWorkChannelBuffer.SetNumActiveChannels(last_ch);
-
-      for (int ch = 0; ch < last_ch; ++ch)
-      {
-         mOutChannels[ch] = gWorkChannelBuffer.GetChannel(ch);
-      }
-
-      {
-         if (target->GetBuffer()->NumActiveChannels() != mDsp->getNumOutputs())
-            return;
-      }
-   }
-
-   mDsp->compute(gBufferSize, mInChannels.begin(), mOutChannels.begin());
-
+   // copy to viz buffer
    for (int ch = 0; ch < gWorkChannelBuffer.NumActiveChannels(); ++ch)
    {
       Add(target->GetBuffer()->GetChannel(ch), gWorkChannelBuffer.GetChannel(ch), GetBuffer()->BufferSize());
@@ -348,9 +230,4 @@ void FaustConnector::Process(double time)
    }
 
    GetBuffer()->Reset();
-}
-
-void FaustConnector::SetEnabled(bool enabled)
-{
-   mEnabled = enabled;
 }

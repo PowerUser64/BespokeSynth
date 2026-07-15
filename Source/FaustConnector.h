@@ -24,11 +24,12 @@
 
 #include "CodeEntry.h"
 #include "IAudioProcessor.h"
+#include "RtDoubleBuffer.h"
 #include "TextEntry.h"
 #include "IDrawableModule.h"
 #include "FaustUI.h"
+#include "FaustDSP.h"
 #include "Slider.h"
-#include <array>
 #include "faust/dsp/interpreter-dsp.h"
 
 // Faust includes (not directly used, TODO: figure out how to include these in the compiled program)
@@ -72,25 +73,17 @@ public:
    bool IsEnabled() const override;
 
 private:
-   std::array<float*, FAUST_MAX_CHANNELS> mInChannels = { 0 };
-   std::array<float*, FAUST_MAX_CHANNELS> mOutChannels = { 0 };
+   FaustChannelArray mInChannels = { 0 };
+   FaustChannelArray mOutChannels = { 0 };
 
-   void CompileFaustDsp();
+   void UpdateDspFromEditorBox();
    void HandleFaustError();
-   bool HasFaustError();
 
-   interpreter_dsp* mDsp = 0;
-   FaustUI* mDspUi = 0;
+   RtDoubleBuffer<FaustDSP> mDspDoubleBuf;
+   FaustUI mDspUi;
    CodeEntry* mDspEditorBox = 0;
    bool mEditMode = false;
 
    interpreter_dsp_factory* mDspFactory = 0;
-   std::string mNewDspString = "";
-   std::string mDspString = "";
    std::string mFaustErrorStr = "";
-
-   std::string mFaustLibPath;
-   std::array<const char*, 2> mFaustFactoryArgv;
-
-   void SetMetadataFromDSP();
 };
