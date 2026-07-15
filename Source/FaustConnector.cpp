@@ -51,6 +51,7 @@ IDrawableModule* FaustConnector::Create()
    FaustConnector* ret = new FaustConnector();
    if (ret->mDspDoubleBuf.GetCurrent().IsReady())
    {
+      // TODO: when error messages are implemented, report these as errors in the UI:
       assert(ret->mDspDoubleBuf.GetCurrent().GetNumOutputs() <= FAUST_MAX_CHANNELS);
       assert(ret->mDspDoubleBuf.GetCurrent().GetNumInputs() <= FAUST_MAX_CHANNELS);
    }
@@ -167,7 +168,7 @@ void FaustConnector::Process(double time)
 
    // TODO(Blake): decide if this is the best way to support the `enabled` button
    // IDEA: maybe we could do it with metadata attributes? (eg. have an attribute that says `disabledBehavior = bypass`)
-   if (!mEnabled || mDspDoubleBuf.GetCurrent().IsReady())
+   if (!mEnabled || !mDspDoubleBuf.GetCurrent().IsReady())
    {
       // Make the "enabled" button act as a bypass for faust programs that look like audio effects
       if (mDspDoubleBuf.GetCurrent().GetNumInputs() != 0 && GetBuffer()->NumActiveChannels() != 0)

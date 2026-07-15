@@ -48,6 +48,8 @@ public:
    // Module interface
    FaustDSP();
    FaustDSP(std::string dspString);
+   FaustDSP(const FaustDSP& other);
+   FaustDSP& operator=(const FaustDSP& that);
    virtual ~FaustDSP();
 
    // Process

@@ -135,6 +135,9 @@ void FaustUI::UiConstructionComplete(){
    FILTER_CURRENT_GEN_UI_PARAM_LIST(mButtonFloats)
 }
 
+#undef FILTER_CURRENT_GEN_UI_LIST
+#undef FILTER_CURRENT_GEN_UI_PARAM_LIST
+
 #define TRY_EXISTING_CONTROL(found, label, controls)   \
    for (auto& control : controls)                      \
       if (strncmp(control.ptr->Name(), label, 100))    \
