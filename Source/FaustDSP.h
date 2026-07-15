@@ -22,20 +22,16 @@
 
 #pragma once
 
-#include "CodeEntry.h"
+// TODO(Blake): cleanup unused includes once factoring FaustDSP out of FaustConnector is done
+
 #include "IAudioProcessor.h"
 #include "RtDoubleBuffer.h"
-#include "TextEntry.h"
-#include "IDrawableModule.h"
-#include "FaustUI.h"
-#include "FaustDSP.h"
-#include "Slider.h"
+#include <array>
 #include "faust/dsp/interpreter-dsp.h"
 
 // Faust includes (not directly used, TODO: figure out how to include these in the compiled program)
 #include "faust/dsp/dsp.h"
 #include "faust/gui/UI.h"
-#include "faust/gui/meta.h"
 
 // TODO(Blake):
 // This define exists because we need an array of pointers to channels for
@@ -44,46 +40,58 @@
 // TODO: check that the number of channels in the faust program is less than FAUST_MAX_CHANNELS (at compile time, in cmake)
 #define FAUST_MAX_CHANNELS 2
 
-class FaustConnector : public IAudioProcessor, public IDrawableModule, public ITextEntryListener, public IFloatSliderListener, public ICodeEntryListener
+typedef std::array<float*, FAUST_MAX_CHANNELS> FaustChannelArray;
+
+class FaustDSP
 {
 public:
    // Module interface
-   FaustConnector();
-   virtual ~FaustConnector();
-   static bool AcceptsAudio();
-   static bool AcceptsNotes();
-   static bool AcceptsPulses();
-   static IDrawableModule* Create();
-
-   // UI
-   void CreateUIControls() override;
-   void FloatSliderUpdated(FloatSlider* slider, float oldVal, double time) override { };
-   void DrawModule() override;
-   void CheckboxUpdated(Checkbox* checkbox, double time) override;
-   void TextEntryComplete(TextEntry* entry) override;
-
-   // UI: Editor
-   void KeyPressed(int key, bool isRepeat) override;
-   void ExecuteCode() override;
-   std::pair<int, int> ExecuteBlock(int lineStart, int lineEnd) override { return std::pair<int, int>(); }
+   FaustDSP();
+   FaustDSP(std::string dspString);
+   virtual ~FaustDSP();
 
    // Process
-   void Process(double time) override;
-   void SetEnabled(bool enabled) override;
-   bool IsEnabled() const override;
+   void Process(double time, FaustChannelArray& mInChannels, FaustChannelArray& mOutChannels);
+
+   // DSP Lifecycle
+   void UpdateDsp(std::string dspString);
+   bool IsReady();
+
+   // Getters/Setters
+   std::string GetDspString() { return mDspString; }
+   int GetNumInputs()
+   {
+      assert(IsReady());
+      return mDsp->getNumInputs();
+   }
+   int GetNumOutputs()
+   {
+      assert(IsReady());
+      return mDsp->getNumOutputs();
+   }
+   void BuildUserInterface(UI* ui)
+   {
+      assert(IsReady());
+      mDsp->buildUserInterface(ui);
+   }
 
 private:
-   FaustChannelArray mInChannels = { 0 };
-   FaustChannelArray mOutChannels = { 0 };
+   bool HasError();
 
-   void UpdateDspFromEditorBox();
-   void HandleFaustError();
-
-   RtDoubleBuffer<FaustDSP> mDspDoubleBuf;
-   FaustUI mDspUi;
-   CodeEntry* mDspEditorBox = 0;
-   bool mEditMode = false;
-
+   interpreter_dsp* mDsp = 0;
    interpreter_dsp_factory* mDspFactory = 0;
+
+   std::string mDspString = "";
    std::string mFaustErrorStr = "";
+
+   std::string mFaustLibPath;
+   std::array<const char*, 2> mFaustFactoryArgv;
+
+   IAudioProcessor* mParentAudioProcessor;
 };
+
+// A stand-in for cases where a generic faust dsp is needed
+const FaustDSP& gFaustDefaultProgram();
+
+// Helper class for switching between the two DSP's
+typedef RtDoubleBuffer<FaustDSP> DspPair;
