@@ -196,6 +196,8 @@ target_sources(BespokeSynth PRIVATE
     EventCanvas.h
     FaustConnector.cpp
     FaustConnector.h
+    FaustDSP.cpp
+    FaustDSP.h
     FaustUI.cpp
     FaustUI.h
     FFT.cpp
@@ -616,6 +618,7 @@ target_sources(BespokeSynth PRIVATE
     QwertyController.h
     QwertyToPitchMapping.cpp
     QwertyToPitchMapping.h
+    RtDoubleBuffer.h
     RadioButton.cpp
     RadioButton.h
     RadioSequencer.cpp
