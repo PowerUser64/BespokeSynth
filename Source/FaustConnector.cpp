@@ -134,6 +134,14 @@ void FaustConnector::KeyPressed(int key, bool isRepeat)
    }
 }
 
+void FaustConnector::LoadState(FileStreamIn& in, int rev)
+{
+   IDrawableModule::LoadState(in, rev);
+
+   mDspEditorBox->Publish();
+   UpdateDspFromEditorBox();
+}
+
 void FaustConnector::ExecuteCode()
 {
    if (mEditMode == false)
