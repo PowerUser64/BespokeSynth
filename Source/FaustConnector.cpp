@@ -75,11 +75,11 @@ void FaustConnector::UpdateDspFromEditorBox()
 
 void FaustConnector::HandleFaustError()
 {
-   if (mDspDoubleBuf.GetFrontBuffer().IsReady() == false)
+   if (mDspDoubleBuf.GetFrontBuffer().HasError() == false)
       return;
 
    ofLog() << "Faust error:" << '\n'
-           << mFaustErrorStr;
+           << mDspDoubleBuf.GetBackBuffer().GetErrorString();
 }
 
 bool FaustConnector::IsEnabled() const
