@@ -108,7 +108,7 @@ void FaustUI::UiConstructionBegin()
    {                                           \
       if (control.generation != mUiGeneration) \
       {                                        \
-         control.ptr->Delete();                \
+         control.ptr->RemoveFromOwner();       \
          control.ptr = 0;                      \
       }                                        \
    }
