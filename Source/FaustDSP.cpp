@@ -43,6 +43,9 @@ FaustDSP::FaustDSP()
 FaustDSP::~FaustDSP()
 {
    delete mDsp;
+   mDsp = 0;
+   deleteInterpreterDSPFactory(mDspFactory);
+   mDspFactory = 0;
 };
 
 // QUESTION:
@@ -62,7 +65,7 @@ FaustDSP::FaustDSP(std::string dspString)
 
 FaustDSP::FaustDSP(const FaustDSP& other)
 : mDspString(other.mDspString)
-, mFaustErrorStr(other.mFaustErrorStr)
+, mFaustErrorString(other.mFaustErrorString)
 , mFaustLibPath(other.mFaustLibPath)
 , mFaustFactoryArgv(other.mFaustFactoryArgv)
 {
@@ -79,7 +82,9 @@ FaustDSP& FaustDSP::operator=(const FaustDSP& other)
       mDspFactory = 0;
 
       mDspString = other.mDspString;
-      mFaustErrorStr = other.mFaustErrorStr;
+      mFaustErrorString = other.mFaustErrorString;
+      mFaustLibPath = other.mFaustLibPath;
+      mFaustFactoryArgv = { "-I", mFaustLibPath.c_str() };
 
       UpdateDsp(mDspString);
    }
@@ -102,8 +107,8 @@ void FaustDSP::UpdateDsp(std::string dspString)
    // }
 
    mDspString = dspString;
-   mFaustErrorStr = "";
-   mDspFactory = createInterpreterDSPFactoryFromString("FaustDSP", mDspString, mFaustFactoryArgv.size(), mFaustFactoryArgv.begin(), mFaustErrorStr);
+   mFaustErrorString = "";
+   mDspFactory = createInterpreterDSPFactoryFromString("FaustDSP", mDspString, mFaustFactoryArgv.size(), mFaustFactoryArgv.begin(), mFaustErrorString);
 
    // TODO: check `err` and display it on the module
    // TODO: remove the assert
@@ -118,7 +123,7 @@ void FaustDSP::UpdateDsp(std::string dspString)
 bool FaustDSP::HasError()
 {
    bool hasFactory = mDspFactory != 0;
-   bool hasFaustError = mFaustErrorStr != "";
+   bool hasFaustError = mFaustErrorString != "";
 
    bool ret = (hasFactory == false) || (hasFaustError == true);
 
@@ -130,14 +135,6 @@ inline bool FaustDSP::IsReady()
    bool hasDsp = mDsp != 0;
 
    bool _ret_is_ready = hasDsp && (HasError() == false);
-
-   // // Temporary debug test:
-   // if (_ret_is_ready)
-   // {
-   //    GetNumInputs();
-   //    GetNumOutputs();
-   //    GetDspString();
-   // }
 
    return _ret_is_ready;
 }
