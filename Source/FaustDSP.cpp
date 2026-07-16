@@ -63,6 +63,8 @@ FaustDSP::FaustDSP(std::string dspString)
 FaustDSP::FaustDSP(const FaustDSP& other)
 : mDspString(other.mDspString)
 , mFaustErrorStr(other.mFaustErrorStr)
+, mFaustLibPath(other.mFaustLibPath)
+, mFaustFactoryArgv(other.mFaustFactoryArgv)
 {
    UpdateDsp(mDspString);
 }
@@ -100,6 +102,7 @@ void FaustDSP::UpdateDsp(std::string dspString)
    // }
 
    mDspString = dspString;
+   mFaustErrorStr = "";
    mDspFactory = createInterpreterDSPFactoryFromString("FaustDSP", mDspString, mFaustFactoryArgv.size(), mFaustFactoryArgv.begin(), mFaustErrorStr);
 
    // TODO: check `err` and display it on the module
@@ -114,15 +117,15 @@ void FaustDSP::UpdateDsp(std::string dspString)
 
 bool FaustDSP::HasError()
 {
-   bool hasNoFactory = mDspFactory == 0;
+   bool hasFactory = mDspFactory != 0;
    bool hasFaustError = mFaustErrorStr != "";
 
-   bool ret = hasNoFactory || hasFaustError;
+   bool ret = (hasFactory == false) || (hasFaustError == true);
 
    return ret;
 }
 
-bool FaustDSP::IsReady()
+inline bool FaustDSP::IsReady()
 {
    bool hasDsp = mDsp != 0;
 
@@ -143,6 +146,9 @@ bool FaustDSP::IsReady()
 void FaustDSP::Process(double time, FaustChannelArray& mInChannels, FaustChannelArray& mOutChannels)
 {
    PROFILER(FaustDSP);
+
+   if (!IsReady())
+      return;
 
    if (!mDsp)
       return;
