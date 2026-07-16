@@ -65,6 +65,7 @@ public:
    // UI: Editor
    void KeyPressed(int key, bool isRepeat) override;
    void ExecuteCode() override;
+   void LoadState(FileStreamIn& in, int rev) override;
    std::pair<int, int> ExecuteBlock(int lineStart, int lineEnd) override { return std::pair<int, int>(); }
 
    // Process
