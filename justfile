@@ -16,13 +16,13 @@ echo_do := "echo_do() {
 
 
 # Aliases for common commands
-alias br := build-run
-alias rel := release
-alias cb := clean-build
 alias b := build
 alias r := run
-alias g := run-gdb
-alias bg := build-run-gdb
+alias d := run-debugger
+alias rel := release
+alias ra := run-args
+alias br := build-run
+alias bd := build-run-debugger
 alias l := list
 
 
@@ -35,17 +35,9 @@ build-run *command_prefix:
    echo_do just build run "$@"
 
 
-# Equivalent to `just clean build`
-clean-build:
-   #!/usr/bin/env sh
-   {{echo_do}}
-
-   echo_do just clean build
-
-
-# Run with gdb
+# Run with debugger
 [positional-arguments]
-run-gdb *gdb_commands:
+run-debugger *gdb_commands:
    #!/usr/bin/env sh
    {{echo_do}}
 
@@ -59,11 +51,11 @@ run-gdb *gdb_commands:
 
 # Build, then run with gdb
 [positional-arguments]
-build-run-gdb *gdb_commands:
+build-run-debugger *gdb_commands:
    #!/usr/bin/env sh
    {{echo_do}}
 
-   # Copied from `run-gdb` to produce cleaner errors from `just`
+   # Copied from `run-debugger` to produce cleaner errors from `just`
 
    for arg in "$@"; do
       set -- "$@" -ex "$arg"
@@ -121,14 +113,22 @@ run *command_prefix:
    #!/usr/bin/env sh
    {{echo_do}}
 
-   # Check if we haven't compiled yet
-   bespoke_exe="$(just _print_binary_name)"
-   if ! [ -f "$bespoke_exe" ]; then
-      echo_do just build
-   fi
+   just _build_if_needed
 
    # Run the program
-   echo_do "$@" "$bespoke_exe"
+   echo_do "$@" "$(just _print_binary_name)"
+
+
+# Run (and pass arguments to bespoke (eg. `--help`))
+[positional-arguments]
+run-args *args:
+   #!/usr/bin/env sh
+   {{echo_do}}
+
+   just _build_if_needed
+
+   # Run the program
+   echo_do "$(just _print_binary_name)" "$@"
 
 
 # Compile all `.dsp` in Source/faust/
@@ -157,6 +157,16 @@ _print_binary_name:
    #!/usr/bin/env sh
    bespoke_exe=./ignore/build/"$BESPOKE_BUILD_TYPE"/Source/BespokeSynth_artefacts/"$BESPOKE_BUILD_TYPE"/BespokeSynth
    realpath "$bespoke_exe"
+
+
+_build_if_needed:
+   #!/usr/bin/env sh
+
+   # Check if we haven't compiled yet
+   bespoke_exe="$(just _print_binary_name)"
+   if ! [ -f "$bespoke_exe" ]; then
+      echo_do just build
+   fi
 
 
 # List available actions
