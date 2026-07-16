@@ -24,6 +24,7 @@
 
 #include "ChannelBuffer.h"
 #include "FaustDSP.h"
+#include "FileStream.h"
 #include "IAudioReceiver.h"
 #include "ModularSynth.h" // save/load
 #include "OpenFrameworksPort.h"
@@ -49,12 +50,6 @@ bool FaustConnector::AcceptsPulses() { return false; }
 IDrawableModule* FaustConnector::Create()
 {
    FaustConnector* ret = new FaustConnector();
-   if (ret->mDspDoubleBuf.GetFrontBuffer().IsReady())
-   {
-      // TODO: when error messages are implemented, report these as errors in the UI:
-      assert(ret->mDspDoubleBuf.GetFrontBuffer().GetNumOutputs() <= FAUST_MAX_CHANNELS);
-      assert(ret->mDspDoubleBuf.GetFrontBuffer().GetNumInputs() <= FAUST_MAX_CHANNELS);
-   }
    return ret;
 }
 
@@ -127,10 +122,13 @@ void FaustConnector::KeyPressed(int key, bool isRepeat)
       {
          if (mEditMode == false)
          {
-            mDspEditorBox->SetText(mDspDoubleBuf.GetBackBuffer().GetDspString());
             mDspEditorBox->ResetScroll();
             IKeyboardFocusListener::SetActiveKeyboardFocus(mDspEditorBox);
             mEditMode = true;
+         }
+         else
+         {
+            mEditMode = false;
          }
       }
    }
