@@ -84,7 +84,4 @@ private:
    FaustUI mDspUi;
    CodeEntry* mDspEditorBox = 0;
    bool mEditMode = false;
-
-   interpreter_dsp_factory* mDspFactory = 0;
-   std::string mFaustErrorStr = "";
 };

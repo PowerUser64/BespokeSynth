@@ -140,7 +140,7 @@ void FaustUI::UiConstructionComplete(){
 
 #define TRY_EXISTING_CONTROL(found, label, controls)   \
    for (auto& control : controls)                      \
-      if (strncmp(control.ptr->Name(), label, 100))    \
+      if (!strncmp(control.ptr->Name(), label, 100))   \
       {                                                \
          found = true;                                 \
          control.generation = mUiGeneration;           \
@@ -182,7 +182,7 @@ void FaustUI::addCheckButton(const char* label, float* zone)
 void FaustUI::addHorizontalSlider(const char* label, float* zone, float init, float min, float max, float step)
 {
    bool foundOld = false;
-   TRY_EXISTING_CONTROL(foundOld, label, mCheckboxes)
+   TRY_EXISTING_CONTROL(foundOld, label, mSliders)
 
    if (!foundOld)
    {
@@ -196,7 +196,7 @@ void FaustUI::addHorizontalSlider(const char* label, float* zone, float init, fl
 void FaustUI::addNumEntry(const char* label, float* zone, float init, float min, float max, float step)
 {
    bool foundOld = false;
-   TRY_EXISTING_CONTROL(foundOld, label, mCheckboxes)
+   TRY_EXISTING_CONTROL(foundOld, label, mTextEntries)
 
    if (!foundOld)
    {

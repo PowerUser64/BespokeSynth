@@ -61,6 +61,8 @@ public:
 
    // Getters/Setters
    std::string GetDspString() { return mDspString; }
+   std::string GetErrorString() { return mFaustErrorString; }
+   bool HasError();
    int GetNumInputs()
    {
       assert(IsReady());
@@ -78,18 +80,16 @@ public:
    }
 
 private:
-   bool HasError();
-
    interpreter_dsp* mDsp = 0;
    interpreter_dsp_factory* mDspFactory = 0;
 
    std::string mDspString = "";
-   std::string mFaustErrorStr = "";
+   std::string mFaustErrorString = "";
 
    std::string mFaustLibPath;
    std::array<const char*, 2> mFaustFactoryArgv;
 
-   IAudioProcessor* mParentAudioProcessor;
+   IAudioProcessor* mParentAudioProcessor = 0;
 };
 
 // A stand-in for cases where a generic faust dsp is needed

@@ -56,6 +56,7 @@ public:
    // -- active widgets
 
    void addButton(const char* label, float* zone) override;
+   void extracted(const char*& label, bool& foundOld);
    void addCheckButton(const char* label, float* zone) override;
    void addVerticalSlider(const char* label, float* zone, float init, float min, float max, float step) override;
    void addHorizontalSlider(const char* label, float* zone, float init, float min, float max, float step) override;
