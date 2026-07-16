@@ -37,6 +37,7 @@ public:
    : mDoubleBuffer{ current, other }
    { }
 
+
    //
    // UI thread API
    //
@@ -98,7 +99,6 @@ private:
    inline Byte GetIndex()
    {
       Byte index = mBitFlags.load(std::memory_order_acquire) & mIndexFlag;
-      ofLog() << "DEBUGPRINT[55]: " << __FILE__ << ":" << __LINE__ << ": index=" << (index ? '1' : '0');
       return index;
    }
 
