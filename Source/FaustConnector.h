@@ -24,7 +24,7 @@
 
 #include "CodeEntry.h"
 #include "IAudioProcessor.h"
-#include "RtDoubleBuffer.h"
+#include "PoliteDoubleBuffer.h"
 #include "TextEntry.h"
 #include "IDrawableModule.h"
 #include "FaustUI.h"
@@ -79,7 +79,7 @@ private:
    void UpdateDspFromEditorBox();
    void HandleFaustError();
 
-   RtDoubleBuffer<FaustDSP> mDspDoubleBuf;
+   PoliteDoubleBuffer<FaustDSP> mDspDoubleBuf;
    FaustUI mDspUi;
    CodeEntry* mDspEditorBox = 0;
    bool mEditMode = false;
