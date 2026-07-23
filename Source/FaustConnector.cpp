@@ -164,13 +164,17 @@ void FaustConnector::Process(double time)
 {
    PROFILER(FaustConnector);
 
+   mDspDoubleBuf.BeginAudioThread();
+   Impl_Process(time);
+   mDspDoubleBuf.EndAudioThread();
+}
+
+inline void FaustConnector::Impl_Process(double time)
+{
    // TODO(UI): when faust UI elements that act as visualizers are supported, we will need to treat them as valid outputs as well, and we shouldn't stop here if the dsp has any
    IAudioReceiver* target = GetTarget();
    if (target == nullptr)
       return;
-
-   // before first reference to mDsp
-   mDspDoubleBuf.SwitchBuffersIfNeeded();
 
    // TODO(Blake): decide if this is the best way to support the `enabled` button
    // IDEA: maybe we could do it with metadata attributes? (eg. have an attribute that says `disabledBehavior = bypass`)
