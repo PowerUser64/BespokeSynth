@@ -30,6 +30,7 @@
 #include "OpenFrameworksPort.h"
 #include "Profiler.h" // profiling
 #include "SynthGlobals.h"
+#include "ofxJSONElement.h"
 #include <cassert>
 
 FaustConnector::~FaustConnector() { };
@@ -38,7 +39,7 @@ FaustConnector::FaustConnector()
 : IAudioProcessor(gBufferSize)
 , IDrawableModule(120, 10)
 , mDspDoubleBuf(FaustDSP("process = _, _;"), FaustDSP("process = _, _;"))
-, mDspUi(this, this, this)
+, mDspUi(0, 0, this, this, this)
 {
 }
 
@@ -58,17 +59,28 @@ void FaustConnector::CreateUIControls()
    IDrawableModule::CreateUIControls();
 
    mDspEditorBox = new CodeEntry(this, "__dsp_editor", 3, 100, 300, 300);
+}
 
-   UpdateDspFromEditorBox();
+void FaustConnector::LoadLayout(const ofxJSONElement& moduleInfo)
+{
+   auto dspString = mModuleSaveData.LoadString("__dsp_editor", moduleInfo, "process = _, _;");
+
+   UpdateDspFromString(dspString);
+   mDspDoubleBuf.ForceSwitchNowAndBlockAudioThread();
 }
 
 void FaustConnector::UpdateDspFromEditorBox()
 {
-   mDspDoubleBuf.GetBackBuffer().UpdateDsp(mDspEditorBox->GetText(true));
+   UpdateDspFromString(mDspEditorBox->GetText(true));
+}
+
+void FaustConnector::UpdateDspFromString(std::string dspString)
+{
+   mDspDoubleBuf.GetBackBuffer().UpdateDsp(dspString);
    if (mDspDoubleBuf.GetBackBuffer().IsReady() == true)
    {
       mEditMode = false;
-      mDspDoubleBuf.GetBackBuffer().BuildUserInterface(&mDspUi);
+      mDspUi.UpdateUserInterface(mDspDoubleBuf.GetBackBuffer());
       mDspDoubleBuf.SwitchWhenReady();
    }
 }
@@ -164,6 +176,10 @@ void FaustConnector::Process(double time)
 {
    PROFILER(FaustConnector);
 
+   // TODO: in the rare case that we are blocked, act as if the module is disabled.
+   // This will only happen if the user attempts to compile twice in a single
+   // audio frame and both attempts happen before or after BeginAudioThread()
+   // is called.
    mDspDoubleBuf.BeginAudioThread();
    Impl_Process(time);
    mDspDoubleBuf.EndAudioThread();

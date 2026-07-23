@@ -37,12 +37,7 @@
 #include "faust/gui/UI.h"
 #include "faust/gui/meta.h"
 
-// TODO(Blake):
-// This define exists because we need an array of pointers to channels for
-// faust to process, and for memory management reasons, it's nice for its size
-// to be known at compile time.
-// TODO: check that the number of channels in the faust program is less than FAUST_MAX_CHANNELS (at compile time, in cmake)
-#define FAUST_MAX_CHANNELS 2
+// TODO: check that the number of channels in the faust program is less than FAUST_MAX_CHANNELS
 
 class FaustConnector : public IAudioProcessor, public IDrawableModule, public ITextEntryListener, public IFloatSliderListener, public ICodeEntryListener
 {
@@ -66,6 +61,7 @@ public:
    void KeyPressed(int key, bool isRepeat) override;
    void ExecuteCode() override;
    void LoadState(FileStreamIn& in, int rev) override;
+   void LoadLayout(const ofxJSONElement& moduleInfo) override;
    std::pair<int, int> ExecuteBlock(int lineStart, int lineEnd) override { return std::pair<int, int>(); }
 
    // Process
@@ -78,6 +74,7 @@ private:
    FaustChannelArray mOutChannels = { 0 };
 
    void UpdateDspFromEditorBox();
+   void UpdateDspFromString(std::string dspString);
    void HandleFaustError();
 
    void Impl_Process(double time);
