@@ -22,8 +22,10 @@
 
 #pragma once
 
+#include <mutex>
 #include <vector>
 #include "Checkbox.h"
+#include "FaustDSP.h"
 #include "IDrawableModule.h"
 #include "Slider.h"
 #include "TextEntry.h"
@@ -33,9 +35,10 @@ class FaustUI : public UI
 {
 public:
    // TODO: can this be just a single parameter?
-   FaustUI(IFloatSliderListener* parentFloatSlider, IDrawableModule* parentDrawableModule, ITextEntryListener* parentTextEntryListener);
+   FaustUI(int uiOriginX, int uiOriginY, IFloatSliderListener* parentFloatSlider, IDrawableModule* parentDrawableModule, ITextEntryListener* parentTextEntryListener);
    ~FaustUI();
 
+   void UpdateUserInterface(FaustDSP& dsp);
    void UiConstructionBegin();
    void UiConstructionComplete();
 
@@ -43,6 +46,7 @@ public:
    void Impl_CheckboxUpdate(Checkbox* checkbox, double time);
 
    void UpdateCursorPos(int x, int y);
+   void ResetCursorAndModuleBounds();
    int GetUiBottomEdgeOffset();
    int GetUiLeftEdgeOffset();
 
@@ -56,7 +60,6 @@ public:
    // -- active widgets
 
    void addButton(const char* label, float* zone) override;
-   void extracted(const char*& label, bool& foundOld);
    void addCheckButton(const char* label, float* zone) override;
    void addVerticalSlider(const char* label, float* zone, float init, float min, float max, float step) override;
    void addHorizontalSlider(const char* label, float* zone, float init, float min, float max, float step) override;
@@ -94,6 +97,7 @@ private:
    };
 
    int mUiGeneration = -1;
+   std::mutex mUiListLock;
    std::vector<UiMeta<TextEntry*>> mTextEntries;
    std::vector<UiMeta<Checkbox*>> mCheckboxes;
    std::vector<UiMeta<FloatSlider*>> mSliders;
@@ -126,6 +130,6 @@ private:
    int mModuleSizeY = 5;
 
    IDrawableModule* mParentDrawableModule;
-   IFloatSliderListener* mParentFloatSliderListner;
+   IFloatSliderListener* mParentFloatSliderListener;
    ITextEntryListener* mParentTextEntryListener;
 };
