@@ -72,6 +72,10 @@ public:
    TextEntryType GetTextEntryType() const { return mType; }
    void SetText(std::string text);
    void SelectAll();
+   void SetVar(int* var) { mVarInt = var; };
+   void SetVar(float* var) { mVarFloat = var; };
+   void SetVar(char* var) { mVarCString = var; };
+   void SetVar(std::string* var) { mVarString = var; };
 
    void GetDimensions(float& width, float& height) override;
 

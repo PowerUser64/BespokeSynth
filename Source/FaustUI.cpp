@@ -22,6 +22,7 @@
 
 #include "FaustUI.h"
 #include "Checkbox.h"
+#include "FaustDSP.h"
 #include "IDrawableModule.h"
 #include "Slider.h"
 #include "SynthGlobals.h"
@@ -36,14 +37,14 @@
  */
 
 // parent should be the "this" pointer for the module that will update the sliders
-FaustUI::FaustUI(IFloatSliderListener* parentFloatSliderListener, IDrawableModule* parentDrawableModule, ITextEntryListener* parentTextEntryListener)
-: mParentDrawableModule(parentDrawableModule)
-, mParentFloatSliderListner(parentFloatSliderListener)
+FaustUI::FaustUI(int uiOriginX, int uiOriginY, IFloatSliderListener* parentFloatSliderListener, IDrawableModule* parentDrawableModule, ITextEntryListener* parentTextEntryListener)
+: mUiOriginX(uiOriginX)
+, mUiOriginY(uiOriginY)
+, mParentDrawableModule(parentDrawableModule)
+, mParentFloatSliderListener(parentFloatSliderListener)
 , mParentTextEntryListener(parentTextEntryListener)
 {
-   // Move the cursor to its starting position
-   mCursorX = mUiOriginX + mElementPaddingX;
-   mCursorY = mUiOriginY + mElementPaddingY;
+   ResetCursorAndModuleBounds();
 }
 
 FaustUI::~FaustUI()
@@ -52,12 +53,21 @@ FaustUI::~FaustUI()
 
 void FaustUI::Impl_DrawControls()
 {
+   mUiListLock.lock();
+
    for (auto& control : mTextEntries)
-      control.ptr->Draw();
+      if (control.generation == mUiGeneration)
+         control.ptr->Draw();
+
    for (auto& control : mSliders)
-      control.ptr->Draw();
+      if (control.generation == mUiGeneration)
+         control.ptr->Draw();
+
    for (auto& control : mCheckboxes)
-      control.ptr->Draw();
+      if (control.generation == mUiGeneration)
+         control.ptr->Draw();
+
+   mUiListLock.unlock();
 }
 
 void FaustUI::Impl_CheckboxUpdate(Checkbox* checkbox, double time)
@@ -97,20 +107,23 @@ void FaustUI::UpdateCursorPos(int x, int y)
    mParentDrawableModule->Resize(mModuleSizeX, mModuleSizeY);
 }
 
-// take note of any controls we have, so we can diff it against the new list
-void FaustUI::UiConstructionBegin()
+void FaustUI::ResetCursorAndModuleBounds()
 {
-   mUiGeneration += 1;
+   // Move the cursor to its starting position
+   mCursorX = mUiOriginX + mElementPaddingX;
+   mCursorY = mUiOriginY + mElementPaddingY;
+   mModuleSizeX = mCursorX;
+   mModuleSizeY = mCursorY;
 }
 
-#define FILTER_CURRENT_GEN_UI_LIST(list)       \
-   for (auto& control : list)                  \
-   {                                           \
-      if (control.generation != mUiGeneration) \
-      {                                        \
-         control.ptr->RemoveFromOwner();       \
-         control.ptr = 0;                      \
-      }                                        \
+#define FILTER_CURRENT_GEN_UI_LIST(list)                            \
+   for (auto& control : list)                                       \
+   {                                                                \
+      if (control.generation != mUiGeneration)                      \
+      {                                                             \
+         mParentDrawableModule->RemoveUIControl(control.ptr, true); \
+         control.ptr = 0;                                           \
+      }                                                             \
    }
 
 // TODO: swap with the end of the list
@@ -119,33 +132,51 @@ void FaustUI::UiConstructionBegin()
    {                                           \
       if (control.generation != mUiGeneration) \
       {                                        \
-         delete control.ptr;                   \
          control.ptr = 0;                      \
       }                                        \
    }
 
+void FaustUI::UpdateUserInterface(FaustDSP& dsp)
+{
+   mUiListLock.lock();
+   UiConstructionBegin();
+   dsp.BuildUserInterface(this);
+   UiConstructionComplete();
+   mUiListLock.unlock();
+}
+
+// take note of any controls we have, so we can diff it against the new list
+void FaustUI::UiConstructionBegin()
+{
+   ResetCursorAndModuleBounds();
+   mUiGeneration += 1;
+}
+
 // find any controls that don't exist any more and clean them up
-void FaustUI::UiConstructionComplete(){
-   // delete old controls
-   FILTER_CURRENT_GEN_UI_LIST(mTextEntries)
-   FILTER_CURRENT_GEN_UI_LIST(mCheckboxes)
-   FILTER_CURRENT_GEN_UI_LIST(mSliders)
-   FILTER_CURRENT_GEN_UI_PARAM_LIST(mCheckboxBools)
-   FILTER_CURRENT_GEN_UI_PARAM_LIST(mCheckboxFloats)
-   FILTER_CURRENT_GEN_UI_PARAM_LIST(mButtonFloats)
+void FaustUI::UiConstructionComplete()
+{
+   // TODO: fix control deletion
+   // // delete old controls
+   // FILTER_CURRENT_GEN_UI_LIST(mTextEntries)
+   // FILTER_CURRENT_GEN_UI_LIST(mCheckboxes)
+   // FILTER_CURRENT_GEN_UI_LIST(mSliders)
+   // FILTER_CURRENT_GEN_UI_PARAM_LIST(mCheckboxBools)
+   // FILTER_CURRENT_GEN_UI_PARAM_LIST(mCheckboxFloats)
+   // FILTER_CURRENT_GEN_UI_PARAM_LIST(mButtonFloats)
 }
 
 #undef FILTER_CURRENT_GEN_UI_LIST
 #undef FILTER_CURRENT_GEN_UI_PARAM_LIST
 
-#define TRY_EXISTING_CONTROL(found, label, controls)   \
-   for (auto& control : controls)                      \
-      if (!strncmp(control.ptr->Name(), label, 100))   \
-      {                                                \
-         found = true;                                 \
-         control.generation = mUiGeneration;           \
-         control.ptr->SetPosition(mCursorX, mCursorY); \
-         break;                                        \
+#define TRY_EXISTING_CONTROL(var, label, _controls)     \
+   var = 0;                                             \
+   for (auto& _control : _controls)                     \
+      if (!strncmp(_control.ptr->Name(), label, 100))   \
+      {                                                 \
+         _control.generation = mUiGeneration;           \
+         _control.ptr->SetPosition(mCursorX, mCursorY); \
+         var = &_control;                               \
+         break;                                         \
       }
 
 // -- active widgets
@@ -163,30 +194,36 @@ void FaustUI::addVerticalSlider(const char* label, float* zone, float init, floa
 
 void FaustUI::addCheckButton(const char* label, float* zone)
 {
-   bool foundOld = false;
-   TRY_EXISTING_CONTROL(foundOld, label, mCheckboxes)
+   UiMeta<Checkbox*>* control;
+   TRY_EXISTING_CONTROL(control, label, mCheckboxes)
 
-   if (!foundOld)
+   if (control)
+   { }
+   else
    {
       UiMeta<bool*> newBool(mUiGeneration, new bool(false));
       UiMeta<Checkbox*> checkbox(mUiGeneration, new Checkbox(mParentDrawableModule, label, mCursorX, mCursorY, newBool.ptr));
 
-      mCheckboxFloats.push_back(UiMeta<float*>(mUiGeneration, zone));
       mCheckboxBools.push_back(newBool);
 
       mCheckboxes.push_back(checkbox);
    }
+   mCheckboxFloats.push_back(UiMeta<float*>(mUiGeneration, zone));
 
    UpdateCursorPos(mCheckboxSizeX, mCheckboxSizeY);
 }
 void FaustUI::addHorizontalSlider(const char* label, float* zone, float init, float min, float max, float step)
 {
-   bool foundOld = false;
-   TRY_EXISTING_CONTROL(foundOld, label, mSliders)
+   UiMeta<FloatSlider*>* control = 0;
+   TRY_EXISTING_CONTROL(control, label, mSliders)
 
-   if (!foundOld)
+   if (control)
    {
-      FloatSlider* slider = new FloatSlider(mParentFloatSliderListner, label, mCursorX, mCursorY, mSliderSizeX, mSliderSizeY, zone, min, max);
+      control->ptr->SetVar(zone);
+   }
+   else
+   {
+      FloatSlider* slider = new FloatSlider(mParentFloatSliderListener, label, mCursorX, mCursorY, mSliderSizeX, mSliderSizeY, zone, min, max);
 
       mSliders.push_back(UiMeta<FloatSlider*>(mUiGeneration, slider));
    }
@@ -195,10 +232,14 @@ void FaustUI::addHorizontalSlider(const char* label, float* zone, float init, fl
 }
 void FaustUI::addNumEntry(const char* label, float* zone, float init, float min, float max, float step)
 {
-   bool foundOld = false;
-   TRY_EXISTING_CONTROL(foundOld, label, mTextEntries)
+   UiMeta<TextEntry*>* control = 0;
+   TRY_EXISTING_CONTROL(control, label, mTextEntries)
 
-   if (!foundOld)
+   if (control)
+   {
+      control->ptr->SetVar(zone);
+   }
+   else
    {
       UiMeta<TextEntry*> textentry(mUiGeneration, new TextEntry(mParentTextEntryListener, label, mCursorX, mCursorY, 5, zone, min, max));
 
