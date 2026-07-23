@@ -48,13 +48,6 @@ FaustDSP::~FaustDSP()
    mDspFactory = 0;
 };
 
-// QUESTION:
-// - how to deduplicate DSP's when editing? should we?
-// - I think we shouldn't, and instead we should have save/load buttons
-
-// DEMO
-int dspIndex = -1;
-
 FaustDSP::FaustDSP(std::string dspString)
 : mFaustLibPath(ofToDataPath("scripts/faust/_stdlib"))
 , mFaustFactoryArgv({ "-I", mFaustLibPath.c_str() })
@@ -130,24 +123,13 @@ bool FaustDSP::HasError()
    return ret;
 }
 
-inline bool FaustDSP::IsReady()
-{
-   bool hasDsp = mDsp != 0;
-
-   bool _ret_is_ready = hasDsp && (HasError() == false);
-
-   return _ret_is_ready;
-}
-
 // TODO(Blake): what to do with time parameter?
 void FaustDSP::Process(double time, FaustChannelArray& mInChannels, FaustChannelArray& mOutChannels)
 {
    PROFILER(FaustDSP);
 
+   // IsReady performs null check against mDsp
    if (!IsReady())
-      return;
-
-   if (!mDsp)
       return;
 
    // TODO: sample-accurate sliders and checkboxes - ComputeSliders(i)

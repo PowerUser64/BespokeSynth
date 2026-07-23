@@ -57,7 +57,13 @@ public:
 
    // DSP Lifecycle
    void UpdateDsp(std::string dspString);
-   bool IsReady();
+   inline bool IsReady()
+   {
+      bool hasDsp = mDsp != 0;
+      bool _ret_is_ready = hasDsp && (HasError() == false);
+      return _ret_is_ready;
+   }
+
 
    // Getters/Setters
    std::string GetDspString() { return mDspString; }
