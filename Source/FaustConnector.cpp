@@ -192,6 +192,9 @@ inline void FaustConnector::Impl_Process(double time)
    if (target == nullptr)
       return;
 
+   // before first reference to mDsp
+   mDspDoubleBuf.SwitchBuffersIfNeeded();
+
    // TODO(Blake): decide if this is the best way to support the `enabled` button
    // IDEA: maybe we could do it with metadata attributes? (eg. have an attribute that says `disabledBehavior = bypass`)
    if (!mEnabled || !mDspDoubleBuf.GetFrontBuffer().IsReady())

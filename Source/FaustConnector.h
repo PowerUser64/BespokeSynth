@@ -77,8 +77,6 @@ private:
    void UpdateDspFromString(std::string dspString);
    void HandleFaustError();
 
-   void Impl_Process(double time);
-
    PoliteDoubleBuffer<FaustDSP> mDspDoubleBuf;
    FaustUI mDspUi;
    CodeEntry* mDspEditorBox = 0;
