@@ -66,7 +66,6 @@ void FaustConnector::LoadLayout(const ofxJSONElement& moduleInfo)
    auto dspString = mModuleSaveData.LoadString("__dsp_editor", moduleInfo, "process = _, _;");
 
    UpdateDspFromString(dspString);
-   mDspDoubleBuf.ForceSwitchNowAndBlockAudioThread();
 }
 
 void FaustConnector::UpdateDspFromEditorBox()
@@ -176,13 +175,8 @@ void FaustConnector::Process(double time)
 {
    PROFILER(FaustConnector);
 
-   // TODO: in the rare case that we are blocked, act as if the module is disabled.
-   // This will only happen if the user attempts to compile twice in a single
-   // audio frame and both attempts happen before or after BeginAudioThread()
-   // is called.
-   mDspDoubleBuf.BeginAudioThread();
+   mDspDoubleBuf.SwitchBuffersIfNeeded();
    Impl_Process(time);
-   mDspDoubleBuf.EndAudioThread();
 }
 
 inline void FaustConnector::Impl_Process(double time)
@@ -191,9 +185,6 @@ inline void FaustConnector::Impl_Process(double time)
    IAudioReceiver* target = GetTarget();
    if (target == nullptr)
       return;
-
-   // before first reference to mDsp
-   mDspDoubleBuf.SwitchBuffersIfNeeded();
 
    // TODO(Blake): decide if this is the best way to support the `enabled` button
    // IDEA: maybe we could do it with metadata attributes? (eg. have an attribute that says `disabledBehavior = bypass`)
