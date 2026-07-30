@@ -2,7 +2,6 @@
 
 # Default values for environment variables
 export BESPOKE_BUILD_TYPE := env("BESPOKE_BUILD_TYPE", "Debug")
-export GDB_BINARY := env("GDB_BINARY", "gdb")
 export CMAKE_ADDITIONAL_FLAGS := env("CMAKE_ADDITIONAL_FLAGS", "")
 
 # Simple utility to print out what's being executed before running it, matching just's default format
@@ -19,11 +18,9 @@ echo_do := "echo_do() {
 # Aliases for common commands
 alias b := build
 alias r := run
-alias d := run-debugger
 alias rel := release
 alias ra := run-args
 alias br := build-run
-alias bd := build-run-debugger
 alias l := list
 
 
@@ -34,36 +31,6 @@ build-run *command_prefix:
    {{echo_do}}
 
    echo_do just build run "$@"
-
-
-# Run with debugger
-[positional-arguments]
-run-debugger *gdb_commands:
-   #!/usr/bin/env sh
-   {{echo_do}}
-
-   for arg in "$@"; do
-      set -- "$@" -ex "$arg"
-      shift
-   done
-
-   echo_do just run "$GDB_BINARY" "$@" -ex r --
-
-
-# Build, then run with gdb
-[positional-arguments]
-build-run-debugger *gdb_commands:
-   #!/usr/bin/env sh
-   {{echo_do}}
-
-   # Copied from `run-debugger` to produce cleaner errors from `just`
-
-   for arg in "$@"; do
-      set -- "$@" -ex "$arg"
-      shift
-   done
-
-   echo_do just build run "$GDB_BINARY" -ex r "$@" --
 
 
 # Run subsequent `just` commands in release mode
