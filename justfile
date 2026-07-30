@@ -3,6 +3,7 @@
 # Default values for environment variables
 export BESPOKE_BUILD_TYPE := env("BESPOKE_BUILD_TYPE", "Debug")
 export GDB_BINARY := env("GDB_BINARY", "gdb")
+export CMAKE_ADDITIONAL_FLAGS := env("CMAKE_ADDITIONAL_FLAGS", "")
 
 # Simple utility to print out what's being executed before running it, matching just's default format
 echo_do := "echo_do() {
@@ -104,7 +105,12 @@ configure *cmake_args:
       set -- -DBESPOKE_VST2_SDK_LOCATION="$VST2_SDK_HOME" "$@"
    fi
 
-   echo_do cmake -B ignore/build/"$BESPOKE_BUILD_TYPE" -GNinja -DCMAKE_BUILD_TYPE="$BESPOKE_BUILD_TYPE" "$@"
+   echo_do cmake \
+      -B ignore/build/"$BESPOKE_BUILD_TYPE" \
+      -GNinja \
+      -DCMAKE_BUILD_TYPE="$BESPOKE_BUILD_TYPE" \
+      $CMAKE_ADDITIONAL_FLAGS \
+      "$@"
 
 
 # Run (with an optional command prefix, such as `gdb`)
@@ -167,6 +173,11 @@ _build_if_needed:
    if ! [ -f "$bespoke_exe" ]; then
       echo_do just build
    fi
+
+
+_pwd:
+   #!/usr/bin/env sh
+   pwd
 
 
 # List available actions
