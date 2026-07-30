@@ -5,14 +5,16 @@ export BESPOKE_BUILD_TYPE := env("BESPOKE_BUILD_TYPE", "Debug")
 export CMAKE_ADDITIONAL_FLAGS := env("CMAKE_ADDITIONAL_FLAGS", "")
 
 # Simple utility to print out what's being executed before running it, matching just's default format
-echo_do := "echo_do() {
+echo_do := "
+   echo_do() {
       [ -p /dev/stdout ] || \\
       echo -en '\\e[1m' >&2 # style: bold
       echo -n \"$@\"    >&2
       [ -p /dev/stdout ] || \\
       echo -e '\\e[0m'  >&2 # style: reset
       \"$@\"
-   }"
+   }
+"
 
 
 # Aliases for common commands
@@ -28,7 +30,7 @@ alias l := list
 [positional-arguments]
 build-run *command_prefix:
    #!/usr/bin/env sh
-   {{echo_do}}
+   # include: {{echo_do}}
 
    echo_do just build run "$@"
 
@@ -38,7 +40,7 @@ build-run *command_prefix:
 [positional-arguments]
 release *just_commands:
    #!/usr/bin/env sh
-   {{echo_do}}
+   # include: {{echo_do}}
 
    echo_do export BESPOKE_BUILD_TYPE=Release
    echo_do just "$@"
@@ -48,7 +50,7 @@ release *just_commands:
 [positional-arguments]
 build:
    #!/usr/bin/env sh
-   {{echo_do}}
+   # include: {{echo_do}}
 
    # Check if we haven't configured yet
    if ! [ -d "./ignore/build/$BESPOKE_BUILD_TYPE" ]; then
@@ -64,7 +66,7 @@ build:
 [positional-arguments]
 configure *cmake_args:
    #!/usr/bin/env sh
-   {{echo_do}}
+   # include: {{echo_do}}
 
    # Find the vst2 sdk in ./ignore/VST_SDK/VST2_SDK or wherever the VST2_SDK_HOME variable points
    VST2_SDK_HOME="${VST2_SDK_HOME:-"$(pwd)"/ignore/VST_SDK/VST2_SDK}"
@@ -84,7 +86,7 @@ configure *cmake_args:
 [positional-arguments]
 run *command_prefix:
    #!/usr/bin/env sh
-   {{echo_do}}
+   # include: {{echo_do}}
 
    just _build_if_needed
 
@@ -96,7 +98,7 @@ run *command_prefix:
 [positional-arguments]
 run-args *args:
    #!/usr/bin/env sh
-   {{echo_do}}
+   # include: {{echo_do}}
 
    just _build_if_needed
 
@@ -107,7 +109,7 @@ run-args *args:
 # Compile all `.dsp` in Source/faust/
 faustc:
    #!/usr/bin/env sh
-   {{echo_do}}
+   # include: {{echo_do}}
 
    cd Source/faust
    for f in *.dsp; do
@@ -134,6 +136,7 @@ _print_binary_name:
 
 _build_if_needed:
    #!/usr/bin/env sh
+   # include: {{echo_do}}
 
    # Check if we haven't compiled yet
    bespoke_exe="$(just _print_binary_name)"
