@@ -49,6 +49,8 @@ FaustUI::FaustUI(int uiOriginX, int uiOriginY, IFloatSliderListener* parentFloat
 
 FaustUI::~FaustUI()
 {
+   for (auto& control : mCheckboxBools)
+      delete control.ptr;
 }
 
 void FaustUI::Impl_DrawControls()
