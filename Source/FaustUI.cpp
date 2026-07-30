@@ -170,17 +170,6 @@ void FaustUI::UiConstructionComplete()
 #undef FILTER_CURRENT_GEN_UI_LIST
 #undef FILTER_CURRENT_GEN_UI_PARAM_LIST
 
-#define TRY_EXISTING_CONTROL(var, label, _controls)     \
-   var = 0;                                             \
-   for (auto& _control : _controls)                     \
-      if (!strncmp(_control.ptr->Name(), label, 100))   \
-      {                                                 \
-         _control.generation = mUiGeneration;           \
-         _control.ptr->SetPosition(mCursorX, mCursorY); \
-         var = &_control;                               \
-         break;                                         \
-      }
-
 // -- active widgets
 
 void FaustUI::addButton(const char* label, float* zone)
@@ -197,7 +186,7 @@ void FaustUI::addVerticalSlider(const char* label, float* zone, float init, floa
 void FaustUI::addCheckButton(const char* label, float* zone)
 {
    UiMeta<Checkbox*>* control;
-   TRY_EXISTING_CONTROL(control, label, mCheckboxes)
+   control = TryGetExistingControl(label, mCheckboxes);
 
    if (control)
    { }
@@ -217,7 +206,7 @@ void FaustUI::addCheckButton(const char* label, float* zone)
 void FaustUI::addHorizontalSlider(const char* label, float* zone, float init, float min, float max, float step)
 {
    UiMeta<FloatSlider*>* control = 0;
-   TRY_EXISTING_CONTROL(control, label, mSliders)
+   control = TryGetExistingControl(label, mSliders);
 
    if (control)
    {
@@ -235,7 +224,7 @@ void FaustUI::addHorizontalSlider(const char* label, float* zone, float init, fl
 void FaustUI::addNumEntry(const char* label, float* zone, float init, float min, float max, float step)
 {
    UiMeta<TextEntry*>* control = 0;
-   TRY_EXISTING_CONTROL(control, label, mTextEntries)
+   control = TryGetExistingControl(label, mTextEntries);
 
    if (control)
    {

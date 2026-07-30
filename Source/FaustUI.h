@@ -96,6 +96,18 @@ private:
       T ptr = 0;
    };
 
+   template <typename T>
+   UiMeta<T>* TryGetExistingControl(const char* label, std::vector<UiMeta<T>>& controls)
+   {
+      for (auto& control : controls)
+         if (!strncmp(control.ptr->Name(), label, 100))
+         {
+            control.generation = mUiGeneration;
+            control.ptr->SetPosition(mCursorX, mCursorY);
+            return &control;
+         }
+   }
+
    int mUiGeneration = -1;
    std::mutex mUiListLock;
    std::vector<UiMeta<TextEntry*>> mTextEntries;
