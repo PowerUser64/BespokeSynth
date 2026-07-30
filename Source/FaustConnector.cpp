@@ -38,7 +38,7 @@ FaustConnector::~FaustConnector() { };
 FaustConnector::FaustConnector()
 : IAudioProcessor(gBufferSize)
 , IDrawableModule(120, 10)
-, mDspDoubleBuf(FaustDSP("process = _, _;"), FaustDSP("process = _, _;"))
+, mDspDoubleBuf(FaustDSP("ERROR"), FaustDSP("process = _, _;"))
 , mDspUi(0, 0, this, this, this)
 {
 }
@@ -59,6 +59,7 @@ void FaustConnector::CreateUIControls()
    IDrawableModule::CreateUIControls();
 
    mDspEditorBox = new CodeEntry(this, "__dsp_editor", 3, 100, 300, 300);
+   mDspEditorBox->SetText(mDspDoubleBuf.GetBackBuffer().GetDspString());
 }
 
 void FaustConnector::LoadLayout(const ofxJSONElement& moduleInfo)
