@@ -23,6 +23,8 @@
 #include "FaustConnector.h"
 
 #include "ChannelBuffer.h"
+#include "Checkbox.h"
+#include "ClickButton.h"
 #include "FaustDSP.h"
 #include "FileStream.h"
 #include "IAudioReceiver.h"
@@ -33,13 +35,13 @@
 #include "ofxJSONElement.h"
 #include <cassert>
 
-FaustConnector::~FaustConnector() { };
+FaustConnector::~FaustConnector() {};
 
 FaustConnector::FaustConnector()
 : IAudioProcessor(gBufferSize)
-, IDrawableModule(120, 10)
+, IDrawableModule(mUiMinWidth, mUiMinHeight)
+, mDspUi(mUiOriginX, mUiOriginY + mUiControlsHeight + mUiLayoutSpacing, this, this, this)
 , mDspDoubleBuf(FaustDSP("ERROR"), FaustDSP("process = _, _;"))
-, mDspUi(0, 0, this, this, this)
 {
 }
 
@@ -54,12 +56,25 @@ IDrawableModule* FaustConnector::Create()
    return ret;
 }
 
+void FaustConnector::ButtonClicked(ClickButton* button, double time)
+{
+   if (button == mUiRunButton)
+      UpdateDspFromEditorBox();
+   else if (button == mUiOptimizeButton)
+      // TODO: optimize dsp with LLVM
+      UpdateDspFromEditorBox();
+}
+
 void FaustConnector::CreateUIControls()
 {
    IDrawableModule::CreateUIControls();
 
-   mDspEditorBox = new CodeEntry(this, "__dsp_editor", 3, 100, 300, 300);
+   mDspEditorBox = new CodeEntry(this, "dsp editor", 0, 100, 300, 300);
    mDspEditorBox->SetText(mDspDoubleBuf.GetBackBuffer().GetDspString());
+
+   mUiEditCheckbox = new Checkbox(this, "edit", mUiOriginX, mUiOriginY, &mEditMode);
+   mUiRunButton = new ClickButton(this, "run", mUiOriginX + mUiLayoutWidthCheckbox + mUiLayoutSpacing, mUiOriginY);
+   mUiOptimizeButton = new ClickButton(this, "optimize", mUiOriginX + mUiLayoutWidthCheckbox + mUiLayoutSpacing + mUiLayoutWidthRunButton + mUiLayoutSpacing, mUiOriginY);
 }
 
 void FaustConnector::LoadLayout(const ofxJSONElement& moduleInfo)
@@ -79,7 +94,6 @@ void FaustConnector::UpdateDspFromString(std::string dspString)
    mDspDoubleBuf.GetBackBuffer().UpdateDsp(dspString);
    if (mDspDoubleBuf.GetBackBuffer().IsReady() == true)
    {
-      mEditMode = false;
       mDspUi.UpdateUserInterface(mDspDoubleBuf.GetBackBuffer());
       mDspDoubleBuf.SwitchWhenReady();
    }
@@ -111,38 +125,24 @@ void FaustConnector::DrawModule()
 
    mDspUi.Impl_DrawControls();
 
+   mUiEditCheckbox->Draw();
+   mUiRunButton->Draw();
+   mUiOptimizeButton->Draw();
+
+   // UI layout
+   mWidth = MAX(mDspUi.GetUiWidth(), mUiControlsWidth) + mUiOriginX + mUiLayoutSpacing;
+   mHeight = mDspUi.GetUiHeight() + mUiControlsHeight + mUiOriginY + mUiLayoutSpacing;
+
    mDspEditorBox->SetShowing(mEditMode);
    if (mEditMode)
    {
-      mDspEditorBox->SetPosition(mDspUi.GetUiLeftEdgeOffset(), mDspUi.GetUiBottomEdgeOffset());
+      mDspEditorBox->SetPosition(mUiOriginX, mHeight);
 
       ofRectangle rect = mDspEditorBox->GetRect(K(local));
       mWidth = MAX(mWidth, rect.x + rect.width + 3);
       mHeight = rect.y + rect.height + 3;
 
       mDspEditorBox->Draw();
-   }
-}
-
-void FaustConnector::KeyPressed(int key, bool isRepeat)
-{
-   IDrawableModule::KeyPressed(key, isRepeat);
-
-   if (gHoveredModule == this)
-   {
-      if (key == 'e' && GetKeyModifiers() == kModifier_Command)
-      {
-         if (mEditMode == false)
-         {
-            mDspEditorBox->ResetScroll();
-            IKeyboardFocusListener::SetActiveKeyboardFocus(mDspEditorBox);
-            mEditMode = true;
-         }
-         else
-         {
-            mEditMode = false;
-         }
-      }
    }
 }
 
@@ -156,9 +156,6 @@ void FaustConnector::LoadState(FileStreamIn& in, int rev)
 
 void FaustConnector::ExecuteCode()
 {
-   if (mEditMode == false)
-      return;
-
    UpdateDspFromEditorBox();
 }
 

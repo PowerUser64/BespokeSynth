@@ -86,14 +86,19 @@ void FaustUI::Impl_CheckboxUpdate(Checkbox* checkbox, double time)
    }
 }
 
-int FaustUI::GetUiBottomEdgeOffset()
+int FaustUI::GetUiHeight()
 {
-   return mCursorY;
+   return mCursorY - mUiOriginY;
+}
+
+int FaustUI::GetUiWidth()
+{
+   return mCursorX + mRowWidth - mUiOriginX;
 }
 
 int FaustUI::GetUiLeftEdgeOffset()
 {
-   return mElementPaddingX;
+   return mElementPaddingX + mUiOriginX;
 }
 
 void FaustUI::UpdateCursorPos(int x, int y)
@@ -105,15 +110,13 @@ void FaustUI::UpdateCursorPos(int x, int y)
    mCursorY += y;
    mModuleSizeY += y;
    mModuleSizeX = MAX(mModuleSizeX, x + mElementPaddingX);
-
-   mParentDrawableModule->Resize(mModuleSizeX, mModuleSizeY);
 }
 
 void FaustUI::ResetCursorAndModuleBounds()
 {
    // Move the cursor to its starting position
-   mCursorX = mUiOriginX + mElementPaddingX;
-   mCursorY = mUiOriginY + mElementPaddingY;
+   mCursorX = mUiOriginX;
+   mCursorY = mUiOriginY;
    mModuleSizeX = mCursorX;
    mModuleSizeY = mCursorY;
 }
@@ -189,7 +192,7 @@ void FaustUI::addCheckButton(const char* label, float* zone)
    control = TryGetExistingControl(label, mCheckboxes);
 
    if (control)
-   { }
+   {}
    else
    {
       UiMeta<bool*> newBool(mUiGeneration, new bool(false));
@@ -242,7 +245,7 @@ void FaustUI::addNumEntry(const char* label, float* zone, float init, float min,
 
 // -- passive widgets
 
-void FaustUI::addHorizontalBargraph(const char* label, float* zone, float min, float max) { }
-void FaustUI::addVerticalBargraph(const char* label, float* zone, float min, float max) { }
+void FaustUI::addHorizontalBargraph(const char* label, float* zone, float min, float max) {}
+void FaustUI::addVerticalBargraph(const char* label, float* zone, float min, float max) {}
 
 #undef TRY_EXISTING_CONTROL

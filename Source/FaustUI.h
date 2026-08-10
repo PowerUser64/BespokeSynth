@@ -47,15 +47,16 @@ public:
 
    void UpdateCursorPos(int x, int y);
    void ResetCursorAndModuleBounds();
-   int GetUiBottomEdgeOffset();
+   int GetUiHeight();
    int GetUiLeftEdgeOffset();
+   int GetUiWidth();
 
    // -- widget layouts
 
-   void openTabBox(const char* label) override { }
-   void openHorizontalBox(const char* label) override { }
-   void openVerticalBox(const char* label) override { }
-   void closeBox() override { }
+   void openTabBox(const char* label) override {}
+   void openHorizontalBox(const char* label) override {}
+   void openVerticalBox(const char* label) override {}
+   void closeBox() override {}
 
    // -- active widgets
 
@@ -72,7 +73,7 @@ public:
 
    // -- soundfiles
 
-   void addSoundfile(const char* label, const char* filename, Soundfile** sf_zone) override { }
+   void addSoundfile(const char* label, const char* filename, Soundfile** sf_zone) override {}
 
 private:
    enum FaustControlType
@@ -91,7 +92,7 @@ private:
       UiMeta(int mUiGeneration, T val)
       : generation(mUiGeneration)
       , ptr(val)
-      { }
+      {}
       int generation = -1;
       T ptr = 0;
    };
@@ -106,6 +107,7 @@ private:
             control.ptr->SetPosition(mCursorX, mCursorY);
             return &control;
          }
+      return nullptr;
    }
 
    int mUiGeneration = -1;
@@ -120,17 +122,17 @@ private:
    int mRowWidth = 100;
    int mRowHeight = 15;
 
-   const int mSliderSizeX = 100;
-   const int mSliderSizeY = 15;
-   const int mCheckboxSizeX = 100;
-   const int mCheckboxSizeY = 15;
-   const int mTextEntrySizeX = 100;
-   const int mTextEntrySizeY = 15;
+   static constexpr int mSliderSizeX = 100;
+   static constexpr int mSliderSizeY = 15;
+   static constexpr int mCheckboxSizeX = 100;
+   static constexpr int mCheckboxSizeY = 15;
+   static constexpr int mTextEntrySizeX = 100;
+   static constexpr int mTextEntrySizeY = 15;
 
-   const int mElementPaddingX = 5;
-   const int mElementPaddingY = 2;
+   static constexpr int mElementPaddingX = 5;
+   static constexpr int mElementPaddingY = 2;
 
-   // the top-left of the UI
+   // the top-left corner of the UI
    const int mUiOriginX = 0;
    const int mUiOriginY = 0;
 
