@@ -50,6 +50,8 @@ if (NOT BESPOKE_USE_SYSTEM_FAUST)
   set(INCLUDE_HTTP       OFF)
   set(INCLUDE_EMCC       OFF)
   set(INCLUDE_WASM_GLUE  OFF)
+  message(STATUS "Faust LLVM backend enabled")
+  set(LLVM_BACKEND COMPILER STATIC DYNAMIC)
   add_subdirectory(
     ${CMAKE_CURRENT_SOURCE_DIR}/faust/build
     ${CMAKE_BINARY_DIR}/faust

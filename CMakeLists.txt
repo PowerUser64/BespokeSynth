@@ -18,6 +18,7 @@ option(BESPOKE_SYSTEM_TUNING_LIBRARY "Use system installation of tuning-library"
 option(BESPOKE_SYSTEM_ABLETONLINK "Use system installation of abletonlink" OFF)
 option(BESPOKE_SYSTEM_READERWRITERQUEUE "Use system installation of readerwriterqueue" OFF)
 option(BESPOKE_SYSTEM_FAUST "Use system installation of libfaust" OFF)
+option(LINK_LLVM_STATIC "Link LLVM statically" OFF) # default to linking llvm dynamically
 option(BESPOKE_USE_ASAN "Build with ASAN" OFF)
 
 # Global CMake options
