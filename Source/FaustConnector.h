@@ -102,5 +102,5 @@ private:
 
    PoliteDoubleBuffer<FaustDSP> mDspDoubleBuf;
    FaustUI mDspUi;
-   bool mEditMode = false;
+   bool mEditMode = true;
 };
