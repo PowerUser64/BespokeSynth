@@ -28,20 +28,16 @@
 #include <cassert>
 #include <string>
 
-// A stand-in for cases when we need a generic faust dsp
-const FaustDSP& gFaustDefaultProgram()
-{
-   static const FaustDSP instance("process = _, _;", false);
-   return instance;
-}
-
 // TODO: clean up constructors and assignment op
 FaustDSP::FaustDSP(std::string dspString, bool optimize)
-: mFaustLibPath(ofToDataPath("scripts/faust/_stdlib"))
-, mFaustFactoryArgv({ "-I", mFaustLibPath.c_str() })
-, mDspString(dspString)
-, mDsp(mFaustErrorString, dspString, optimize, mFaustFactoryArgv)
+: mDspString(dspString)
 {
+   // TODO: scan faust script directory for other directories that were prefixed with an underscore and make them all libraries
+   mFaustLibPath = ofToDataPath("scripts/faust/_stdlib");
+   // TODO: set mFaustFactoryArgv size before pushing all lib paths
+   mFaustFactoryArgv.push_back("-I");
+   mFaustFactoryArgv.push_back(mFaustLibPath.c_str());
+   mDsp.UpdateDsp(mFaustErrorString, dspString, optimize, mFaustFactoryArgv);
 }
 
 void FaustDSP::UpdateDsp(std::string dspString, bool optimize)
@@ -85,35 +81,38 @@ void FaustDSP::Process(double time, FaustChannelArray& mInChannels, FaustChannel
 FaustDSP::DspContainer::DspContainer(DspContainer&& other)
 : mDsp(other.mDsp)
 , mDspFactory(other.mDspFactory)
-, mIsInitialized(other.mIsInitialized)
+, mNeedsDspCleanup(other.mNeedsDspCleanup)
 , mIsLlvmOptimized(other.mIsLlvmOptimized)
 {
    other.mDsp.interp = 0;
    other.mDspFactory.interp = 0;
-   other.mIsInitialized = false;
+   other.mNeedsDspCleanup = false;
 }
 
 void FaustDSP::DspContainer::UpdateDsp(std::string& faustErrorString, std::string& dspString, bool optimize, FaustArgv& argv)
 {
-   if (mIsInitialized)
+   if (mNeedsDspCleanup)
       Delete();
+
+   mNeedsDspCleanup = true;
+   mIsLlvmOptimized = optimize;
 
    if (IsOptimized())
    { // use LLVM
-      mDspFactory.llvm = createDSPFactoryFromString("FaustDSP", dspString, argv.size(), argv.begin(), "", faustErrorString);
+      mDspFactory.llvm = createDSPFactoryFromString("FaustDSP", dspString, argv.size(), const_cast<const char**>(argv.data()), "", faustErrorString);
       if (mDspFactory.llvm == nullptr)
          return;
       mDsp.llvm = mDspFactory.llvm->createDSPInstance();
+      ofLog() << "Faust: LLVM";
    }
    else
    { // use interpreter
-      mDspFactory.interp = createInterpreterDSPFactoryFromString("FaustDSP", dspString, argv.size(), argv.begin(), faustErrorString);
+      mDspFactory.interp = createInterpreterDSPFactoryFromString("FaustDSP", dspString, argv.size(), const_cast<const char**>(argv.data()), faustErrorString);
       if (mDspFactory.interp == nullptr)
          return;
       mDsp.interp = mDspFactory.interp->createDSPInstance();
+      ofLog() << "Faust: Interpreter";
    }
-
-   mIsInitialized = true;
 
    if (GetDsp())
    { // this is required
@@ -123,22 +122,34 @@ void FaustDSP::DspContainer::UpdateDsp(std::string& faustErrorString, std::strin
 
 void FaustDSP::DspContainer::Delete()
 {
-   if (mIsInitialized)
+   if (mNeedsDspCleanup)
    {
       if (IsOptimized())
       {
-         delete mDsp.llvm;
-         mDsp.llvm = 0;
-         deleteDSPFactory(mDspFactory.llvm);
-         mDspFactory.llvm = 0;
+         if (mDsp.llvm)
+         {
+            delete mDsp.llvm;
+            mDsp.llvm = 0;
+         }
+         if (mDspFactory.llvm)
+         {
+            deleteDSPFactory(mDspFactory.llvm);
+            mDspFactory.llvm = 0;
+         }
       }
       else
       {
-         delete mDsp.interp;
-         mDsp.interp = 0;
-         deleteInterpreterDSPFactory(mDspFactory.interp);
-         mDspFactory.interp = 0;
+         if (mDsp.interp)
+         {
+            delete mDsp.interp;
+            mDsp.interp = 0;
+         }
+         if (mDspFactory.interp)
+         {
+            deleteInterpreterDSPFactory(mDspFactory.interp);
+            mDspFactory.interp = 0;
+         }
       }
    }
-   mIsInitialized = false;
+   mNeedsDspCleanup = false;
 }
