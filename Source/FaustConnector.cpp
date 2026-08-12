@@ -24,7 +24,6 @@
 
 #include "ChannelBuffer.h"
 #include "Checkbox.h"
-#include "ClickButton.h"
 #include "FaustDSP.h"
 #include "FileStream.h"
 #include "IAudioReceiver.h"
@@ -41,7 +40,9 @@ FaustConnector::FaustConnector()
 : IAudioProcessor(gBufferSize)
 , IDrawableModule(mUiMinWidth, mUiMinHeight)
 , mDspUi(mUiOriginX, mUiOriginY + mUiControlsHeight + mUiLayoutSpacing, this, this, this)
-, mDspDoubleBuf(FaustDSP("ERROR", mShouldOptimize), FaustDSP("process = _, _;", mShouldOptimize))
+, mDspDoubleBuf(
+  FaustDSP("process = _, _;", ShouldOptimize()),
+  FaustDSP("process = _, _;", ShouldOptimize()))
 {
 }
 
@@ -56,15 +57,6 @@ IDrawableModule* FaustConnector::Create()
    return ret;
 }
 
-void FaustConnector::ButtonClicked(ClickButton* button, double time)
-{
-   if (button == mUiRunButton)
-      UpdateDspFromEditorBox();
-   else if (button == mUiOptimizeButton)
-      // TODO: optimize dsp with LLVM
-      UpdateDspFromEditorBox();
-}
-
 void FaustConnector::CreateUIControls()
 {
    IDrawableModule::CreateUIControls();
@@ -73,8 +65,6 @@ void FaustConnector::CreateUIControls()
    mDspEditorBox->SetText(mDspDoubleBuf.GetBackBuffer().GetDspString());
 
    mUiEditCheckbox = new Checkbox(this, "edit", mUiOriginX, mUiOriginY, &mEditMode);
-   mUiRunButton = new ClickButton(this, "run", mUiOriginX + mUiLayoutWidthCheckbox + mUiLayoutSpacing, mUiOriginY);
-   mUiOptimizeButton = new ClickButton(this, "optimize", mUiOriginX + mUiLayoutWidthCheckbox + mUiLayoutSpacing + mUiLayoutWidthRunButton + mUiLayoutSpacing, mUiOriginY);
 }
 
 void FaustConnector::LoadLayout(const ofxJSONElement& moduleInfo)
@@ -91,7 +81,7 @@ void FaustConnector::UpdateDspFromEditorBox()
 
 void FaustConnector::UpdateDspFromString(std::string dspString)
 {
-   mDspDoubleBuf.GetBackBuffer().UpdateDsp(dspString, mShouldOptimize);
+   mDspDoubleBuf.GetBackBuffer().UpdateDsp(dspString, ShouldOptimize());
    if (mDspDoubleBuf.GetBackBuffer().IsReady() == true)
    {
       mDspUi.UpdateUserInterface(mDspDoubleBuf.GetBackBuffer());
@@ -123,11 +113,16 @@ void FaustConnector::DrawModule()
    if (Minimized() || IsVisible() == false)
       return;
 
+   // optimize module if the edit checkbox was toggled off
+   if (mEditMode != mEditModePreviousState && mEditMode == false)
+   {
+      UpdateDspFromEditorBox();
+   }
+   mEditModePreviousState = mEditMode;
+
    mDspUi.Impl_DrawControls();
 
    mUiEditCheckbox->Draw();
-   mUiRunButton->Draw();
-   mUiOptimizeButton->Draw();
 
    // UI layout
    mWidth = MAX(mDspUi.GetUiWidth(), mUiControlsWidth) + mUiOriginX + mUiLayoutSpacing;
