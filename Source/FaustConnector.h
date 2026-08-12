@@ -80,7 +80,7 @@ private:
    void UpdateDspFromString(std::string dspString);
    void HandleFaustError();
    void Impl_Process(double time);
-   inline bool ShouldOptimize() const { return not mEditMode; }
+   inline bool ShouldOptimize() const { return true; }
 
    // UI: edit/run/optimize
    CodeEntry* mDspEditorBox = 0;
@@ -98,8 +98,6 @@ private:
    static constexpr int mUiControlsHeight = 15;
 
    bool mEditMode = true;
-   // HACK: replace with event handling
-   bool mEditModePreviousState = mEditMode;
    PoliteDoubleBuffer<FaustDSP> mDspDoubleBuf;
    FaustUI mDspUi;
 };
