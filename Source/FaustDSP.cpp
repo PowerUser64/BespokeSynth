@@ -25,97 +25,37 @@
 #include "OpenFrameworksPort.h"
 #include "Profiler.h" // profiling
 #include "SynthGlobals.h"
-#include "faust/dsp/interpreter-dsp.h"
 #include <cassert>
 #include <string>
 
 // A stand-in for cases when we need a generic faust dsp
 const FaustDSP& gFaustDefaultProgram()
 {
-   static const FaustDSP instance("process = _, _;");
+   static const FaustDSP instance("process = _, _;", false);
    return instance;
 }
 
-FaustDSP::FaustDSP()
-: mDspString("process = _, _;") {
-};
-
-FaustDSP::~FaustDSP()
-{
-   delete mDsp;
-   mDsp = 0;
-   deleteInterpreterDSPFactory(mDspFactory);
-   mDspFactory = 0;
-};
-
-FaustDSP::FaustDSP(std::string dspString)
+// TODO: clean up constructors and assignment op
+FaustDSP::FaustDSP(std::string dspString, bool optimize)
 : mFaustLibPath(ofToDataPath("scripts/faust/_stdlib"))
 , mFaustFactoryArgv({ "-I", mFaustLibPath.c_str() })
 , mDspString(dspString)
+, mDsp(mFaustErrorString, dspString, optimize, mFaustFactoryArgv)
 {
-   UpdateDsp(dspString);
 }
 
-FaustDSP::FaustDSP(const FaustDSP& other)
-: mDspString(other.mDspString)
-, mFaustErrorString(other.mFaustErrorString)
-, mFaustLibPath(other.mFaustLibPath)
-, mFaustFactoryArgv(other.mFaustFactoryArgv)
+void FaustDSP::UpdateDsp(std::string dspString, bool optimize)
 {
-   UpdateDsp(mDspString);
-}
+   mDsp.UpdateDsp(mFaustErrorString, dspString, optimize, mFaustFactoryArgv);
 
-FaustDSP& FaustDSP::operator=(const FaustDSP& other)
-{
-   if (this != &other)
-   {
-      delete mDsp;
-      mDsp = 0;
-      deleteInterpreterDSPFactory(mDspFactory);
-      mDspFactory = 0;
-
-      mDspString = other.mDspString;
-      mFaustErrorString = other.mFaustErrorString;
-      mFaustLibPath = other.mFaustLibPath;
-      mFaustFactoryArgv = { "-I", mFaustLibPath.c_str() };
-
-      UpdateDsp(mDspString);
-   }
-   return *this;
-}
-
-void FaustDSP::UpdateDsp(std::string dspString)
-{
-   // TODO: figure out why this crashes (right now this is a leak)
-   // Discard old DSP, if needed
-   // if (mDspFactory != 0)
-   // {
-   //    deleteInterpreterDSPFactory(mDspFactory);
-   //    mDspFactory = 0;
-   // }
-   // if (mDsp != 0)
-   // {
-   //    delete mDsp;
-   //    mDsp = 0;
-   // }
-
-   mDspString = dspString;
-   mFaustErrorString = "";
-   mDspFactory = createInterpreterDSPFactoryFromString("FaustDSP", mDspString, mFaustFactoryArgv.size(), mFaustFactoryArgv.begin(), mFaustErrorString);
-
-   // TODO: check `err` and display it on the module
-   // TODO: remove the assert
    if (HasError() == false)
-   {
-      mDsp = mDspFactory->createDSPInstance();
-      mDsp->init(gSampleRate);
+      // at this point, we should be ready to call Process()
       assert(IsReady());
-   }
 }
 
 bool FaustDSP::HasError()
 {
-   bool hasFactory = mDspFactory != 0;
+   bool hasFactory = mDsp.GetDspFactory() != 0;
    bool hasFaustError = mFaustErrorString != "";
 
    bool ret = (hasFactory == false) || (hasFaustError == true);
@@ -133,5 +73,72 @@ void FaustDSP::Process(double time, FaustChannelArray& mInChannels, FaustChannel
       return;
 
    // TODO: sample-accurate sliders and checkboxes - ComputeSliders(i)
-   mDsp->compute(gBufferSize, mInChannels.begin(), mOutChannels.begin());
+   mDsp.GetDsp()->compute(gBufferSize, mInChannels.begin(), mOutChannels.begin());
+}
+
+
+////////////////////
+//  DspContainer  //
+////////////////////
+
+// Move, then null out `other`
+FaustDSP::DspContainer::DspContainer(DspContainer&& other)
+: mDsp(other.mDsp)
+, mDspFactory(other.mDspFactory)
+, mIsInitialized(other.mIsInitialized)
+, mIsLlvmOptimized(other.mIsLlvmOptimized)
+{
+   other.mDsp.interp = 0;
+   other.mDspFactory.interp = 0;
+   other.mIsInitialized = false;
+}
+
+void FaustDSP::DspContainer::UpdateDsp(std::string& faustErrorString, std::string& dspString, bool optimize, FaustArgv& argv)
+{
+   if (mIsInitialized)
+      Delete();
+
+   if (IsOptimized())
+   { // use LLVM
+      mDspFactory.llvm = createDSPFactoryFromString("FaustDSP", dspString, argv.size(), argv.begin(), "", faustErrorString);
+      if (mDspFactory.llvm == nullptr)
+         return;
+      mDsp.llvm = mDspFactory.llvm->createDSPInstance();
+   }
+   else
+   { // use interpreter
+      mDspFactory.interp = createInterpreterDSPFactoryFromString("FaustDSP", dspString, argv.size(), argv.begin(), faustErrorString);
+      if (mDspFactory.interp == nullptr)
+         return;
+      mDsp.interp = mDspFactory.interp->createDSPInstance();
+   }
+
+   mIsInitialized = true;
+
+   if (GetDsp())
+   { // this is required
+      GetDsp()->init(gSampleRate);
+   }
+}
+
+void FaustDSP::DspContainer::Delete()
+{
+   if (mIsInitialized)
+   {
+      if (IsOptimized())
+      {
+         delete mDsp.llvm;
+         mDsp.llvm = 0;
+         deleteDSPFactory(mDspFactory.llvm);
+         mDspFactory.llvm = 0;
+      }
+      else
+      {
+         delete mDsp.interp;
+         mDsp.interp = 0;
+         deleteInterpreterDSPFactory(mDspFactory.interp);
+         mDspFactory.interp = 0;
+      }
+   }
+   mIsInitialized = false;
 }
