@@ -42,19 +42,19 @@
 #define FAUST_MAX_CHANNELS 2
 
 typedef std::array<float*, FAUST_MAX_CHANNELS> FaustChannelArray;
-typedef std::array<const char*, 2> FaustArgv;
+typedef std::vector<const char*> FaustArgv;
 
 class FaustDSP
 {
 public:
    FaustDSP(const FaustDSP&) = delete;
-   FaustDSP(FaustDSP&&) = default;
+   FaustDSP(FaustDSP&&) noexcept = default;
    FaustDSP& operator=(const FaustDSP&) = delete;
    FaustDSP& operator=(FaustDSP&&) = delete;
 
    // Module interface
    FaustDSP(std::string dspString, bool optimize);
-   ~FaustDSP() {};
+   ~FaustDSP() = default;
 
    // Process
    void Process(double time, FaustChannelArray& mInChannels, FaustChannelArray& mOutChannels);
@@ -98,14 +98,14 @@ private:
       bool IsOptimized() const { return mIsLlvmOptimized; }
 
       DspContainer(const DspContainer&) = delete;
-      DspContainer(DspContainer&&);
+      DspContainer(DspContainer&&) noexcept;
       DspContainer& operator=(const DspContainer&) = delete;
       DspContainer& operator=(DspContainer&&) = delete;
 
+      // default constructor: nothing is initialized
       DspContainer()
       {
-         mDsp.interp = 0;
-         mDspFactory.interp = 0;
+         mNeedsDspCleanup = false;
       }
       DspContainer(std::string& faustErrorString, std::string& dspString, bool optimize, FaustArgv& argv)
       : mIsLlvmOptimized(optimize)
@@ -114,20 +114,19 @@ private:
       }
       ~DspContainer()
       {
-         assert(mIsInitialized);
          Delete();
       }
 
       // TODO: do these functions need to return the correct pointer, or is either one always valid?
       // these short functions don't deserve 7 lines each, just makes it hard to read them
       // clang-format off
-      inline dsp* GetDsp() {
-         assert(mIsInitialized); // TODO: is this a good assert or not?
+      inline dsp* GetDsp() const {
+         assert(mNeedsDspCleanup);
          if (IsOptimized()) return mDsp.llvm;
          else               return mDsp.interp;
       }
-      inline dsp_factory* GetDspFactory() {
-         assert(mIsInitialized);
+      inline dsp_factory* GetDspFactory() const {
+         assert(mNeedsDspCleanup);
          if (IsOptimized()) return mDspFactory.llvm;
          else               return mDspFactory.interp;
       }
@@ -146,12 +145,11 @@ private:
          llvm_dsp_factory* llvm;
       };
 
-      DspTypeUnion mDsp;
-      DspFactoryTypeUnion mDspFactory;
+      DspTypeUnion mDsp{ 0 };
+      DspFactoryTypeUnion mDspFactory{ 0 };
       // have we attempted to create the dsp?
-      bool mIsInitialized = false;
-
-   protected:
+      bool mNeedsDspCleanup = false;
+      // should we use the LLVM version?
       bool mIsLlvmOptimized = false;
    };
 
@@ -163,9 +161,6 @@ private:
    std::string mFaustLibPath;
    FaustArgv mFaustFactoryArgv;
 };
-
-// A stand-in for cases where a generic faust dsp is needed
-const FaustDSP& gFaustDefaultProgram();
 
 // Helper class for switching between the two DSP's
 typedef PoliteDoubleBuffer<FaustDSP> DspPair;
