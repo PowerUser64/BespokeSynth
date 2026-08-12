@@ -82,7 +82,7 @@ private:
    void Impl_Process(double time);
    inline bool ShouldOptimize() const { return true; }
 
-   // UI: edit/run/optimize
+   // UI
    CodeEntry* mDspEditorBox = 0;
    Checkbox* mUiEditCheckbox = 0;
 

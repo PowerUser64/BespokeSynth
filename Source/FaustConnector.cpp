@@ -250,4 +250,3 @@ void FaustConnector::UpdateOldControlName(std::string& oldName)
    if (oldName == "__dsp_editor")
       oldName = "dsp editor";
 }
-
