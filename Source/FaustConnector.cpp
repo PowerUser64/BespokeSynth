@@ -168,8 +168,9 @@ void FaustConnector::Process(double time)
 {
    PROFILER(FaustConnector);
 
-   mDspDoubleBuf.SwitchBuffersIfNeeded();
+   mDspDoubleBuf.BeginAudioThread();
    Impl_Process(time);
+   mDspDoubleBuf.EndAudioThread();
 }
 
 inline void FaustConnector::Impl_Process(double time)
