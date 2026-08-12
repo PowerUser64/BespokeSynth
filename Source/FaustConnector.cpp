@@ -113,13 +113,6 @@ void FaustConnector::DrawModule()
    if (Minimized() || IsVisible() == false)
       return;
 
-   // optimize module if the edit checkbox was toggled off
-   if (mEditMode != mEditModePreviousState && mEditMode == false)
-   {
-      UpdateDspFromEditorBox();
-   }
-   mEditModePreviousState = mEditMode;
-
    mDspUi.Impl_DrawControls();
 
    mUiEditCheckbox->Draw();
