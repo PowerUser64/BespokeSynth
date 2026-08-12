@@ -75,20 +75,19 @@ public:
       mBitFlags.fetch_or(mShouldSwitchFlag, std::memory_order_release);
 
       // allow switching when audio is paused, so we don't lock the ui thread
-      // TODO: fix slight TOCTOU here - we need to capture the mutex AND the ShouldSwitch lock in order to be certain we can call ForceSwitchNowAndBlockAudioThread
       if (TheSynth->IsAudioPaused())
-         ForceSwitchNowAndBlockAudioThread();
+         TrySwitchFromUiThreadAndBlockAudioThread();
    }
    // Perform a switch from the non-audio thread. Only use if you need to call switch and you know the audio thread is stopped.
    // Caller: call ONLY from non-audio thread
    // Thread-safety: this function assumes it isn't called from more than one thread
-   inline void ForceSwitchNowAndBlockAudioThread()
+   inline void TrySwitchFromUiThreadAndBlockAudioThread()
    {
       assert(!IsAudioThread());
-      assert(ShouldSwitch()); // you should only call this if you have requested a switch
 
       AcquireAudioThreadMutex();
-      Unsafe_DoBufferSwitch();
+      if (ShouldSwitch())
+         Unsafe_DoBufferSwitch();
       ReleaseAudioThreadMutex();
    }
 
