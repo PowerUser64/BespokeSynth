@@ -41,7 +41,7 @@ FaustConnector::FaustConnector()
 : IAudioProcessor(gBufferSize)
 , IDrawableModule(mUiMinWidth, mUiMinHeight)
 , mDspUi(mUiOriginX, mUiOriginY + mUiControlsHeight + mUiLayoutSpacing, this, this, this)
-, mDspDoubleBuf(FaustDSP("ERROR"), FaustDSP("process = _, _;"))
+, mDspDoubleBuf(FaustDSP("ERROR", mShouldOptimize), FaustDSP("process = _, _;", mShouldOptimize))
 {
 }
 
@@ -91,7 +91,7 @@ void FaustConnector::UpdateDspFromEditorBox()
 
 void FaustConnector::UpdateDspFromString(std::string dspString)
 {
-   mDspDoubleBuf.GetBackBuffer().UpdateDsp(dspString);
+   mDspDoubleBuf.GetBackBuffer().UpdateDsp(dspString, mShouldOptimize);
    if (mDspDoubleBuf.GetBackBuffer().IsReady() == true)
    {
       mDspUi.UpdateUserInterface(mDspDoubleBuf.GetBackBuffer());
