@@ -41,7 +41,7 @@
 
 // TODO: check that the number of channels in the faust program is less than FAUST_MAX_CHANNELS
 
-class FaustConnector : public IAudioProcessor, public IDrawableModule, public ITextEntryListener, public IFloatSliderListener, public ICodeEntryListener, public IButtonListener
+class FaustConnector : public IAudioProcessor, public IDrawableModule, public ITextEntryListener, public IFloatSliderListener, public ICodeEntryListener
 {
 public:
    // Module interface
@@ -78,12 +78,11 @@ private:
    void UpdateDspFromString(std::string dspString);
    void HandleFaustError();
    void Impl_Process(double time);
+   inline bool ShouldOptimize() const { return not mEditMode; }
 
    // UI: edit/run/optimize
    CodeEntry* mDspEditorBox = 0;
    Checkbox* mUiEditCheckbox = 0;
-   ClickButton* mUiRunButton = 0;
-   ClickButton* mUiOptimizeButton = 0;
 
    static constexpr int mUiOriginX = 5;
    static constexpr int mUiOriginY = 2;
@@ -92,15 +91,13 @@ private:
 
    static constexpr int mUiLayoutSpacing = 2;
    static constexpr int mUiLayoutWidthCheckbox = 37;
-   static constexpr int mUiLayoutWidthRunButton = 22;
-   static constexpr int mUiLayoutWidthOptimizeButton = 52;
 
-   static constexpr int mUiControlsWidth = mUiLayoutWidthCheckbox + mUiLayoutSpacing + mUiLayoutWidthRunButton + mUiLayoutSpacing + mUiLayoutWidthOptimizeButton + mUiLayoutSpacing;
+   static constexpr int mUiControlsWidth = mUiLayoutWidthCheckbox + mUiLayoutSpacing;
    static constexpr int mUiControlsHeight = 15;
 
-   void ButtonClicked(ClickButton* button, double time) override;
-
+   bool mEditMode = true;
+   // HACK: replace with event handling
+   bool mEditModePreviousState = mEditMode;
    PoliteDoubleBuffer<FaustDSP> mDspDoubleBuf;
    FaustUI mDspUi;
-   bool mEditMode = true;
 };
