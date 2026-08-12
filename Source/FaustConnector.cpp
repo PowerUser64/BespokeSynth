@@ -87,6 +87,10 @@ void FaustConnector::UpdateDspFromString(std::string dspString)
       mDspUi.UpdateUserInterface(mDspDoubleBuf.GetBackBuffer());
       mDspDoubleBuf.SwitchWhenReady();
    }
+   else
+   {
+      HandleFaustError();
+   }
 }
 
 void FaustConnector::HandleFaustError()
