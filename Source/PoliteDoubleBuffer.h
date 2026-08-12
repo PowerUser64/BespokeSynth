@@ -26,6 +26,7 @@
 #include "SynthGlobals.h"
 #include "juce_core/juce_core.h"
 #include <atomic>
+#include <utility>
 
 template <typename T>
 class PoliteDoubleBuffer
@@ -33,9 +34,9 @@ class PoliteDoubleBuffer
    typedef unsigned char Byte;
 
 public:
-   PoliteDoubleBuffer(T current, T other)
-   : mDoubleBuffer{ current, other }
-   { }
+   PoliteDoubleBuffer(T(current), T other)
+   : mDoubleBuffer{ std::move(current), std::move(other) }
+   {}
 
 
    //
