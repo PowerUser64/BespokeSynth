@@ -23,15 +23,28 @@
 
 #pragma once
 
+#include "ModularSynth.h"
 #include "SynthGlobals.h"
 #include "juce_core/juce_core.h"
 #include <atomic>
 #include <utility>
+#include <cassert>
 
 template <typename T>
 class PoliteDoubleBuffer
 {
+private: // Data members
+   // The Buffers
+   T mDoubleBuffer[2];
+
+   // Core internal data type
    typedef unsigned char Byte;
+
+   // Data and locks
+   std::atomic_uchar mBitFlags = 0;
+   const Byte mIndexFlag = 0b001; // the current index into the double-buffer
+   const Byte mShouldSwitchFlag = 0b010; // whether we should flip index to point at the other buffer
+   const Byte mAudioThreadMutexFlag = 0b100; // whether it's safe to switch
 
 public:
    PoliteDoubleBuffer(T(current), T other)
@@ -43,21 +56,40 @@ public:
    // UI thread API
    //
 
-   // Say we should switch buffers (NOTE: call ONLY from non-audio thread)
-   // (NOTE: this function assumes it isn't called from more than one thread)
-   inline void SwitchWhenReady()
-   {
-      assert(!IsAudioThread());
-      EnsureNotWaitingForSwitch();
-      mBitFlags.fetch_or(mSwitchReadyFlag, std::memory_order_release);
-   }
-   // Get the buffer that isn't in front (NOTE: call ONLY from the non-audio thread)
-   // (NOTE: this function assumes it isn't called from more than one thread)
+   // Get the buffer that isn't in front.
+   // Caller: call ONLY from non-audio thread
+   // Thread-safety: this function assumes it isn't called from more than one thread
    inline T& GetBackBuffer()
    {
       assert(!IsAudioThread());
       EnsureNotWaitingForSwitch();
       return mDoubleBuffer[!GetIndex()];
+   }
+   // Say we should switch buffers
+   // Caller: call ONLY from non-audio thread
+   // Thread-safety: this function assumes it isn't called from more than one thread
+   inline void SwitchWhenReady()
+   {
+      assert(!IsAudioThread());
+
+      mBitFlags.fetch_or(mShouldSwitchFlag, std::memory_order_release);
+
+      // allow switching when audio is paused, so we don't lock the ui thread
+      // TODO: fix slight TOCTOU here - we need to capture the mutex AND the ShouldSwitch lock in order to be certain we can call ForceSwitchNowAndBlockAudioThread
+      if (TheSynth->IsAudioPaused())
+         ForceSwitchNowAndBlockAudioThread();
+   }
+   // Perform a switch from the non-audio thread. Only use if you need to call switch and you know the audio thread is stopped.
+   // Caller: call ONLY from non-audio thread
+   // Thread-safety: this function assumes it isn't called from more than one thread
+   inline void ForceSwitchNowAndBlockAudioThread()
+   {
+      assert(!IsAudioThread());
+      assert(ShouldSwitch()); // you should only call this if you have requested a switch
+
+      AcquireAudioThreadMutex();
+      Unsafe_DoBufferSwitch();
+      ReleaseAudioThreadMutex();
    }
 
 
@@ -65,37 +97,92 @@ public:
    // Audio thread API
    //
 
-   // Get current buffer (NOTE: call ONLY from audio thread)
+   // Get current buffer.
+   // Caller: call ONLY from audio thread
    inline T& GetFrontBuffer()
    {
       assert(IsAudioThread());
       return mDoubleBuffer[GetIndex()];
    }
+   // Acquire the audio thread mutex and switch buffers if needed.
+   // Caller: call ONLY from audio thread
+   inline void BeginAudioThread()
+   {
+      assert(IsAudioThread());
+      AcquireAudioThreadMutex();
+      SwitchBuffersIfNeeded();
+   }
+   // Release the audio thread mutex.
+   // Caller: call ONLY from audio thread
+   inline void EndAudioThread()
+   {
+      assert(IsAudioThread());
+      ReleaseAudioThreadMutex();
+   }
+
+private: // Private methods
+   //
+   // Member functions
+   //
+
    // Switch buffers if we should (NOTE: call ONLY from audio thread)
    inline void SwitchBuffersIfNeeded()
    {
       assert(IsAudioThread());
       if (ShouldSwitch())
       {
-         // flip index
-         mBitFlags.fetch_xor(mIndexFlag, std::memory_order_release);
-         // clear ShouldSwitch
-         mBitFlags.fetch_and(~mSwitchReadyFlag, std::memory_order_release);
+         Unsafe_DoBufferSwitch();
       }
    }
 
-private:
-   // The buffer
-   T mDoubleBuffer[2];
+   // Acquire the audio thread mutex
+   inline void AcquireAudioThreadMutex()
+   {
+      assert(!AudioThreadMutexIsAcquired());
+      Byte expected;
 
-   std::atomic_uchar mBitFlags = 0;
-   const Byte mIndexFlag = 0b01;
-   const Byte mSwitchReadyFlag = 0b10;
+      // wait until mutex is free
+      while ((expected = mBitFlags.load(std::memory_order_relaxed)) & mAudioThreadMutexFlag)
+         ;
+
+      // acquire the mutex
+      while (!mBitFlags.compare_exchange_weak(expected,
+                                              expected | mAudioThreadMutexFlag,
+                                              std::memory_order_acq_rel,
+                                              std::memory_order_relaxed))
+      {
+         // if the mutex was acquired again, wait until it's free again
+         while ((expected = mBitFlags.load(std::memory_order_relaxed)) & mAudioThreadMutexFlag)
+            ;
+      };
+   }
+
+   // Small helper function to perform the buffer switch action. Expects you've done all the work to make this safe (checking locks).
+   inline void Unsafe_DoBufferSwitch()
+   {
+      // slight safety check
+      assert(ShouldSwitch() && AudioThreadMutexIsAcquired());
+      // flip index
+      mBitFlags.fetch_xor(mIndexFlag, std::memory_order_release);
+      // clear ShouldSwitch
+      mBitFlags.fetch_and(~mShouldSwitchFlag, std::memory_order_release);
+   }
+
+   // Release the audio thread mutex
+   inline void ReleaseAudioThreadMutex()
+   {
+      assert(AudioThreadMutexIsAcquired());
+      mBitFlags.fetch_and(~mAudioThreadMutexFlag, std::memory_order_release);
+   }
 
    // Check bitflags
    inline bool ShouldSwitch()
    {
-      return (mBitFlags.load(std::memory_order_acquire) & mSwitchReadyFlag) != 0;
+      return (mBitFlags.load(std::memory_order_acquire) & mShouldSwitchFlag) != 0;
+   }
+   inline bool AudioThreadMutexIsAcquired()
+   {
+      return (mBitFlags.load(std::memory_order_acquire) & mAudioThreadMutexFlag) != 0;
    }
    inline Byte GetIndex()
    {
@@ -111,6 +198,6 @@ private:
       while (ShouldSwitch())
       {
          juce::Thread::yield();
-      };
+      }
    }
 };
