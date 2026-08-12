@@ -246,3 +246,11 @@ inline void FaustConnector::Impl_Process(double time)
 
    GetBuffer()->Reset();
 }
+void FaustConnector::UpdateOldControlName(std::string& oldName)
+{
+   IDrawableModule::UpdateOldControlName(oldName);
+
+   if (oldName == "__dsp_editor")
+      oldName = "dsp editor";
+}
+

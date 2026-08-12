@@ -70,6 +70,8 @@ public:
    void SetEnabled(bool enabled) override;
    bool IsEnabled() const override;
 
+   void UpdateOldControlName(std::string& oldName) override;
+
 private:
    FaustChannelArray mInChannels = { 0 };
    FaustChannelArray mOutChannels = { 0 };
