@@ -47,6 +47,14 @@ typedef std::vector<const char*> FaustArgv;
 class FaustDSP
 {
 public:
+   struct FaustIR
+   {
+      bool mIrIsInitialized = false;
+      bool mIsLlvmOptimized = true; // TODO: change this to be the compile-time value of whether we compile DSPs with LLVM
+      std::string mLlvmTarget = "";
+      std::string mIr = "";
+   };
+
    FaustDSP(const FaustDSP&) = delete;
    FaustDSP(FaustDSP&&) noexcept = default;
    FaustDSP& operator=(const FaustDSP&) = delete;
@@ -60,7 +68,8 @@ public:
    void Process(double time, FaustChannelArray& mInChannels, FaustChannelArray& mOutChannels);
 
    // DSP Lifecycle
-   void UpdateDsp(std::string dspString, bool optimize);
+   void UpdateDspFromString(std::string dspString, bool optimize);
+   void UpdateDspFromIr(FaustIR& ir) { mDsp.UpdateDspFromIr(mFaustErrorString, ir); }
    inline bool IsReady()
    {
       bool hasDsp = mDsp.GetDsp() != 0;
@@ -70,6 +79,15 @@ public:
 
    // Getters/Setters
    std::string GetDspString() { return mDspString; }
+   FaustIR GetDspIr()
+   {
+      return {
+         .mIrIsInitialized = true,
+         .mIsLlvmOptimized = mDsp.IsOptimized(),
+         .mLlvmTarget = mDsp.GetLlvmTarget(),
+         .mIr = mDsp.GetDspIr(),
+      };
+   }
    std::string GetErrorString() { return mFaustErrorString; }
    bool HasError();
    int GetNumInputs()
@@ -95,6 +113,7 @@ private:
    public:
       // Update the dsp
       void UpdateDsp(std::string& faustErrorString, std::string& dspString, bool optimize, FaustArgv& argv);
+      void UpdateDspFromIr(std::string& faustErrorString, FaustDSP::FaustIR& ir);
       bool IsOptimized() const { return mIsLlvmOptimized; }
 
       DspContainer(const DspContainer&) = delete;
@@ -130,6 +149,16 @@ private:
          if (IsOptimized()) return mDspFactory.llvm;
          else               return mDspFactory.interp;
       }
+      inline std::string GetDspIr() const {
+         assert(mNeedsDspCleanup);
+         if (IsOptimized()) return writeDSPFactoryToMachine(mDspFactory.llvm, GetLlvmTarget());
+         else               return writeInterpreterDSPFactoryToBitcode(mDspFactory.interp);
+      }
+      inline std::string GetLlvmTarget() const {
+         assert(mNeedsDspCleanup);
+         if (IsOptimized()) return ""; // TODO: return the llvm target according to what the build machine's target name is
+         else               return "";
+      }
       // clang-format on
 
    private:
@@ -161,6 +190,8 @@ private:
    std::string mFaustLibPath;
    FaustArgv mFaustFactoryArgv;
 };
+
+std::string gDefaultFaustProgram();
 
 // Helper class for switching between the two DSP's
 typedef PoliteDoubleBuffer<FaustDSP> DspPair;

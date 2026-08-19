@@ -61,7 +61,7 @@ public:
 
    // UI: Editor
    void ExecuteCode() override;
-   void LoadState(FileStreamIn& in, int rev) override;
+   void SaveLayout(ofxJSONElement& moduleInfo) override;
    void LoadLayout(const ofxJSONElement& moduleInfo) override;
    std::pair<int, int> ExecuteBlock(int lineStart, int lineEnd) override { return std::pair<int, int>(); }
 
@@ -76,8 +76,11 @@ private:
    FaustChannelArray mInChannels = { 0 };
    FaustChannelArray mOutChannels = { 0 };
 
+   void UpdateDspFromIrOrEditorBox();
    void UpdateDspFromEditorBox();
    void UpdateDspFromString(std::string dspString);
+   void UpdateDspFromIr();
+   void CommitDsp();
    void HandleFaustError();
    void Impl_Process(double time);
    inline bool ShouldOptimize() const { return true; }
@@ -100,4 +103,7 @@ private:
    bool mEditMode = true;
    PoliteDoubleBuffer<FaustDSP> mDspDoubleBuf;
    FaustUI mDspUi;
+
+   // a copy of the IR for save/load
+   FaustDSP::FaustIR mDspIr;
 };
