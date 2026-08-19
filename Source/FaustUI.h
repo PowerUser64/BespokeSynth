@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include <mutex>
 #include <vector>
 #include "Checkbox.h"
 #include "FaustDSP.h"
@@ -111,7 +110,6 @@ private:
    }
 
    int mUiGeneration = -1;
-   std::mutex mUiListLock;
    std::vector<UiMeta<TextEntry*>> mTextEntries;
    std::vector<UiMeta<Checkbox*>> mCheckboxes;
    std::vector<UiMeta<FloatSlider*>> mSliders;
