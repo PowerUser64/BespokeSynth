@@ -188,19 +188,21 @@ void FaustUI::addVerticalSlider(const char* label, float* zone, float init, floa
 
 void FaustUI::addCheckButton(const char* label, float* zone)
 {
-   UiMeta<Checkbox*>* control;
-   control = TryGetExistingControl(label, mCheckboxes);
+   UiMeta<Checkbox*> control = GetNewOrExistingUiControl(label, mCheckboxes);
 
-   if (control)
-   {}
+   if (control.ptr)
+   {
+      control.ptr->SetDefaultValue(*zone);
+   }
    else
    {
       UiMeta<bool*> newBool(mUiGeneration, new bool(false));
-      UiMeta<Checkbox*> checkbox(mUiGeneration, new Checkbox(mParentDrawableModule, label, mCursorX, mCursorY, newBool.ptr));
+      control.ptr = new Checkbox(mParentDrawableModule, label, mCursorX, mCursorY, newBool.ptr);
+      control.ptr->SetDefaultValue(*zone);
 
       mCheckboxBools.push_back(newBool);
 
-      mCheckboxes.push_back(checkbox);
+      mCheckboxes.push_back(control);
    }
    mCheckboxFloats.push_back(UiMeta<float*>(mUiGeneration, zone));
 
@@ -208,34 +210,36 @@ void FaustUI::addCheckButton(const char* label, float* zone)
 }
 void FaustUI::addHorizontalSlider(const char* label, float* zone, float init, float min, float max, float step)
 {
-   UiMeta<FloatSlider*>* control = 0;
-   control = TryGetExistingControl(label, mSliders);
+   UiMeta<FloatSlider*> control = GetNewOrExistingUiControl(label, mSliders);
 
-   if (control)
+   if (control.ptr)
    {
-      control->ptr->SetVar(zone);
+      control.ptr->SetVar(zone);
+      control.ptr->SetDefaultValue(*zone);
    }
    else
    {
-      FloatSlider* slider = new FloatSlider(mParentFloatSliderListener, label, mCursorX, mCursorY, mSliderSizeX, mSliderSizeY, zone, min, max);
+      control.ptr = new FloatSlider(mParentFloatSliderListener, label, mCursorX, mCursorY, mSliderSizeX, mSliderSizeY, zone, min, max);
+      control.ptr->SetDefaultValue(*zone);
 
-      mSliders.push_back(UiMeta<FloatSlider*>(mUiGeneration, slider));
+      mSliders.push_back(control);
    }
 
    UpdateCursorPos(mSliderSizeX, mSliderSizeY);
 }
 void FaustUI::addNumEntry(const char* label, float* zone, float init, float min, float max, float step)
 {
-   UiMeta<TextEntry*>* control = 0;
-   control = TryGetExistingControl(label, mTextEntries);
+   UiMeta<TextEntry*> control = GetNewOrExistingUiControl(label, mTextEntries);
 
-   if (control)
+   if (control.ptr)
    {
-      control->ptr->SetVar(zone);
+      control.ptr->SetVar(zone);
+      control.ptr->SetDefaultValue(*zone);
    }
    else
    {
       UiMeta<TextEntry*> textentry(mUiGeneration, new TextEntry(mParentTextEntryListener, label, mCursorX, mCursorY, 5, zone, min, max));
+      textentry.ptr->SetDefaultValue(*zone);
 
       mTextEntries.push_back(textentry);
    }

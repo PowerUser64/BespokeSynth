@@ -98,16 +98,16 @@ private:
    };
 
    template <typename T>
-   UiMeta<T>* TryGetExistingControl(const char* label, std::vector<UiMeta<T>>& controls)
+   UiMeta<T> GetNewOrExistingUiControl(const char* label, std::vector<UiMeta<T>>& controls)
    {
       for (auto& control : controls)
          if (!strncmp(control.ptr->Name(), label, 100))
          {
             control.generation = mUiGeneration;
             control.ptr->SetPosition(mCursorX, mCursorY);
-            return &control;
+            return control;
          }
-      return nullptr;
+      return UiMeta<T>(mUiGeneration, 0);
    }
 
    int mUiGeneration = -1;
