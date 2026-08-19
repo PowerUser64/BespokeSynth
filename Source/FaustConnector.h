@@ -63,6 +63,7 @@ public:
    void ExecuteCode() override;
    void SaveLayout(ofxJSONElement& moduleInfo) override;
    void LoadLayout(const ofxJSONElement& moduleInfo) override;
+   void LoadState(FileStreamIn& in, int rev) override;
    std::pair<int, int> ExecuteBlock(int lineStart, int lineEnd) override { return std::pair<int, int>(); }
 
    // Process
@@ -76,7 +77,6 @@ private:
    FaustChannelArray mInChannels = { 0 };
    FaustChannelArray mOutChannels = { 0 };
 
-   void UpdateDspFromIrOrEditorBox();
    void UpdateDspFromEditorBox();
    void UpdateDspFromString(std::string dspString);
    void UpdateDspFromIr();
