@@ -91,6 +91,7 @@ void FaustConnector::SaveLayout(ofxJSONElement& moduleInfo)
       dsp["IR"]["mLlvmTarget"] = mDspIr.mLlvmTarget;
       dsp["IR"]["mDspString"] = mDspIr.mDspString;
       dsp["IR"]["mIr"] = mDspIr.mIr;
+      dsp["version"] = GetModuleSaveStateRev();
       moduleInfo["DspSaveData"] = dsp;
    }
 }
