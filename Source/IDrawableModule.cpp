@@ -1400,6 +1400,7 @@ void IDrawableModule::LoadState(FileStreamIn& in, int rev)
       UpdateOldControlName(uicontrolname);
 
       bool threwException = false;
+      const char* exceptionName = "UNKNOWN";
       try
       {
          if (LoadOldControl(in, uicontrolname))
@@ -1445,15 +1446,17 @@ void IDrawableModule::LoadState(FileStreamIn& in, int rev)
       catch (UnknownUIControlException& e)
       {
          threwException = true;
+         exceptionName = "UnknownUIControlException";
       }
       catch (LoadStateException& e)
       {
          threwException = true;
+         exceptionName = "LoadStateException";
       }
 
       if (threwException)
       {
-         TheSynth->LogEvent("Error in module \"" + std::string(Name()) + "\" loading state for control \"" + uicontrolname + "\"", kLogEventType_Error);
+         TheSynth->LogEvent("Error in module \"" + std::string(Name()) + "\" loading state for control \"" + uicontrolname + "\" - " + exceptionName, kLogEventType_Error);
 
          //read through the rest of the module until we find the spacer, so we can continue loading the next module
          int separatorProgress = 0;
