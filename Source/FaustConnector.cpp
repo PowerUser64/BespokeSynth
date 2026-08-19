@@ -105,7 +105,6 @@ void FaustConnector::LoadState(FileStreamIn& in, int rev)
 
 void FaustConnector::UpdateDspFromEditorBox()
 {
-   ofLog() << "update from editor box";
    UpdateDspFromString(mDspEditorBox->GetText(true));
 }
 
@@ -117,7 +116,6 @@ void FaustConnector::UpdateDspFromString(std::string dspString)
 
 void FaustConnector::UpdateDspFromIr()
 {
-   ofLog() << "update from IR";
    mDspDoubleBuf.GetBackBuffer().UpdateDspFromIr(mDspIr);
    CommitDsp();
 }
