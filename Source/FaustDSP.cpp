@@ -31,7 +31,7 @@
 std::string gDefaultFaustProgram() { return "process = _, _;"; }
 
 // TODO: clean up constructors and assignment op
-FaustDSP::FaustDSP(std::string dspString, bool optimize)
+FaustDSP::FaustDSP(std::string dspString)
 : mDspString(dspString)
 {
    // TODO: scan faust script directory for other directories that were prefixed with an underscore and make them all libraries
@@ -39,12 +39,12 @@ FaustDSP::FaustDSP(std::string dspString, bool optimize)
    // TODO: set mFaustFactoryArgv size before pushing all lib paths
    mFaustFactoryArgv.push_back("-I");
    mFaustFactoryArgv.push_back(mFaustLibPath.c_str());
-   mDsp.UpdateDsp(mFaustErrorString, dspString, optimize, mFaustFactoryArgv);
+   mDsp.UpdateDsp(mFaustErrorString, dspString, mFaustFactoryArgv);
 }
 
-void FaustDSP::UpdateDspFromString(std::string dspString, bool optimize)
+void FaustDSP::UpdateDspFromString(std::string dspString)
 {
-   mDsp.UpdateDsp(mFaustErrorString, dspString, optimize, mFaustFactoryArgv);
+   mDsp.UpdateDsp(mFaustErrorString, dspString, mFaustFactoryArgv);
 
    if (HasError() == false)
       // at this point, we should be ready to call Process()
@@ -84,10 +84,9 @@ FaustDSP::DspContainer::DspContainer(DspContainer&& other) noexcept
 : mDsp(other.mDsp)
 , mDspFactory(other.mDspFactory)
 , mNeedsDspCleanup(other.mNeedsDspCleanup)
-, mIsLlvmOptimized(other.mIsLlvmOptimized)
 {
-   other.mDsp.interp = 0;
-   other.mDspFactory.interp = 0;
+   other.mDsp = 0;
+   other.mDspFactory = 0;
    other.mNeedsDspCleanup = false;
 }
 
@@ -97,24 +96,18 @@ void FaustDSP::DspContainer::UpdateDspFromIr(std::string& faustErrorString, Faus
       Delete();
 
    mNeedsDspCleanup = true;
-   mIsLlvmOptimized = ir.mIsLlvmOptimized;
 
-   if (IsOptimized())
-   { // load LLVM dsp factory
-      mDspFactory.llvm = readDSPFactoryFromMachine(ir.mIr, ir.mLlvmTarget, faustErrorString);
-      if (mDspFactory.llvm == nullptr)
-         return;
-      mDsp.llvm = mDspFactory.llvm->createDSPInstance();
-      ofLog() << "Faust: LLVM";
-   }
-   else
-   { // load IR dsp factory
-      mDspFactory.interp = readInterpreterDSPFactoryFromBitcode(ir.mIr, faustErrorString);
-      if (mDspFactory.interp == nullptr)
-         return;
-      mDsp.interp = mDspFactory.interp->createDSPInstance();
-      ofLog() << "Faust: Interpreter";
-   }
+   if (ir.mIsLlvmOptimized != BESPOKE_FAUST_USE_LLVM)
+      return;
+
+#if BESPOKE_FAUST_USE_LLVM
+   mDspFactory = readDSPFactoryFromMachine(ir.mIr, ir.mLlvmTarget, faustErrorString);
+#else
+   mDspFactory = readInterpreterDSPFactoryFromBitcode(ir.mIr, faustErrorString);
+#endif
+   if (mDspFactory == nullptr)
+      return;
+   mDsp = mDspFactory->createDSPInstance();
 
    if (GetDsp())
    {
@@ -122,30 +115,21 @@ void FaustDSP::DspContainer::UpdateDspFromIr(std::string& faustErrorString, Faus
    }
 }
 
-void FaustDSP::DspContainer::UpdateDsp(std::string& faustErrorString, std::string& dspString, bool optimize, FaustArgv& argv)
+void FaustDSP::DspContainer::UpdateDsp(std::string& faustErrorString, std::string& dspString, FaustArgv& argv)
 {
    if (mNeedsDspCleanup)
       Delete();
 
    mNeedsDspCleanup = true;
-   mIsLlvmOptimized = optimize;
 
-   if (IsOptimized())
-   { // use LLVM
-      mDspFactory.llvm = createDSPFactoryFromString("FaustDSP", dspString, argv.size(), const_cast<const char**>(argv.data()), "", faustErrorString);
-      if (mDspFactory.llvm == nullptr)
-         return;
-      mDsp.llvm = mDspFactory.llvm->createDSPInstance();
-      ofLog() << "Faust: LLVM";
-   }
-   else
-   { // use interpreter
-      mDspFactory.interp = createInterpreterDSPFactoryFromString("FaustDSP", dspString, argv.size(), const_cast<const char**>(argv.data()), faustErrorString);
-      if (mDspFactory.interp == nullptr)
-         return;
-      mDsp.interp = mDspFactory.interp->createDSPInstance();
-      ofLog() << "Faust: Interpreter";
-   }
+#if BESPOKE_FAUST_USE_LLVM
+   mDspFactory = createDSPFactoryFromString("FaustDSP", dspString, argv.size(), const_cast<const char**>(argv.data()), "", faustErrorString);
+#else
+   mDspFactory = createInterpreterDSPFactoryFromString("FaustDSP", dspString, argv.size(), const_cast<const char**>(argv.data()), faustErrorString);
+#endif
+   if (mDspFactory == nullptr)
+      return;
+   mDsp = mDspFactory->createDSPInstance();
 
    if (GetDsp())
    {
@@ -157,31 +141,20 @@ void FaustDSP::DspContainer::Delete()
 {
    if (mNeedsDspCleanup)
    {
-      if (IsOptimized())
+
+      if (mDsp)
       {
-         if (mDsp.llvm)
-         {
-            delete mDsp.llvm;
-            mDsp.llvm = 0;
-         }
-         if (mDspFactory.llvm)
-         {
-            deleteDSPFactory(mDspFactory.llvm);
-            mDspFactory.llvm = 0;
-         }
+         delete mDsp;
+         mDsp = 0;
       }
-      else
+      if (mDspFactory)
       {
-         if (mDsp.interp)
-         {
-            delete mDsp.interp;
-            mDsp.interp = 0;
-         }
-         if (mDspFactory.interp)
-         {
-            deleteInterpreterDSPFactory(mDspFactory.interp);
-            mDspFactory.interp = 0;
-         }
+#if BESPOKE_FAUST_USE_LLVM
+         deleteDSPFactory(mDspFactory);
+#else
+         deleteInterpreterDSPFactory(mDspFactory);
+#endif
+         mDspFactory = 0;
       }
    }
    mNeedsDspCleanup = false;

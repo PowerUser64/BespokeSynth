@@ -22,13 +22,28 @@
 
 #pragma once
 
-// TODO(Blake): cleanup unused includes once factoring FaustDSP out of FaustConnector is done
+// TODO: make this default to interpreter when BESPOKE_FAUST_BACKEND is supported in cmake
+// #ifndef BESPOKE_FAUST_BACKEND
+// #endif
+
+#define BESPOKE_FAUST_BACKEND llvm
+#define BESPOKE_FAUST_USE_LLVM true
+
+// #if BESPOKE_FAUST_BACKEND == llvm
+// #define BESPOKE_FAUST_USE_LLVM true
+// #elif BESPOKE_FAUST_BACKEND == interpreter
+// #define BESPOKE_FAUST_USE_LLVM false
+// #endif
 
 #include "PoliteDoubleBuffer.h"
 #include <array>
 #include <cassert>
-#include "faust/dsp/interpreter-dsp.h"
+
+#if BESPOKE_FAUST_USE_LLVM
 #include "faust/dsp/llvm-dsp.h"
+#else
+#include "faust/dsp/interpreter-dsp.h"
+#endif
 
 // Faust includes (not directly used, TODO: figure out how to include these in the compiled program)
 #include "faust/dsp/dsp.h"
@@ -50,7 +65,7 @@ public:
    struct FaustIR
    {
       bool mIrIsInitialized = false;
-      bool mIsLlvmOptimized = true; // TODO: change this to be the compile-time value of whether we compile DSPs with LLVM
+      bool mIsLlvmOptimized = BESPOKE_FAUST_USE_LLVM;
       std::string mLlvmTarget = "";
       std::string mIr = "";
    };
@@ -61,14 +76,14 @@ public:
    FaustDSP& operator=(FaustDSP&&) = delete;
 
    // Module interface
-   FaustDSP(std::string dspString, bool optimize);
+   FaustDSP(std::string dspString);
    ~FaustDSP() = default;
 
    // Process
    void Process(double time, FaustChannelArray& mInChannels, FaustChannelArray& mOutChannels);
 
    // DSP Lifecycle
-   void UpdateDspFromString(std::string dspString, bool optimize);
+   void UpdateDspFromString(std::string dspString);
    void UpdateDspFromIr(FaustIR& ir) { mDsp.UpdateDspFromIr(mFaustErrorString, ir); }
    inline bool IsReady()
    {
@@ -83,7 +98,7 @@ public:
    {
       return {
          .mIrIsInitialized = true,
-         .mIsLlvmOptimized = mDsp.IsOptimized(),
+         .mIsLlvmOptimized = BESPOKE_FAUST_USE_LLVM,
          .mLlvmTarget = mDsp.GetLlvmTarget(),
          .mIr = mDsp.GetDspIr(),
       };
@@ -112,9 +127,8 @@ private:
    {
    public:
       // Update the dsp
-      void UpdateDsp(std::string& faustErrorString, std::string& dspString, bool optimize, FaustArgv& argv);
+      void UpdateDsp(std::string& faustErrorString, std::string& dspString, FaustArgv& argv);
       void UpdateDspFromIr(std::string& faustErrorString, FaustDSP::FaustIR& ir);
-      bool IsOptimized() const { return mIsLlvmOptimized; }
 
       DspContainer(const DspContainer&) = delete;
       DspContainer(DspContainer&&) noexcept;
@@ -126,10 +140,9 @@ private:
       {
          mNeedsDspCleanup = false;
       }
-      DspContainer(std::string& faustErrorString, std::string& dspString, bool optimize, FaustArgv& argv)
-      : mIsLlvmOptimized(optimize)
+      DspContainer(std::string& faustErrorString, std::string& dspString, FaustArgv& argv)
       {
-         UpdateDsp(faustErrorString, dspString, optimize, argv);
+         UpdateDsp(faustErrorString, dspString, argv);
       }
       ~DspContainer()
       {
@@ -141,23 +154,27 @@ private:
       // clang-format off
       inline dsp* GetDsp() const {
          assert(mNeedsDspCleanup);
-         if (IsOptimized()) return mDsp.llvm;
-         else               return mDsp.interp;
+         return mDsp;
       }
       inline dsp_factory* GetDspFactory() const {
          assert(mNeedsDspCleanup);
-         if (IsOptimized()) return mDspFactory.llvm;
-         else               return mDspFactory.interp;
+         return mDspFactory;
       }
       inline std::string GetDspIr() const {
          assert(mNeedsDspCleanup);
-         if (IsOptimized()) return writeDSPFactoryToMachine(mDspFactory.llvm, GetLlvmTarget());
-         else               return writeInterpreterDSPFactoryToBitcode(mDspFactory.interp);
+         #if BESPOKE_FAUST_USE_LLVM
+            return writeDSPFactoryToMachine(mDspFactory, GetLlvmTarget());
+         #else
+            return writeInterpreterDSPFactoryToBitcode(mDspFactory);
+         #endif
       }
       inline std::string GetLlvmTarget() const {
          assert(mNeedsDspCleanup);
-         if (IsOptimized()) return ""; // TODO: return the llvm target according to what the build machine's target name is
-         else               return "";
+         #if BESPOKE_FAUST_USE_LLVM
+            return ""; // TODO: return the llvm target according to what the build machine's target name is
+         #else
+            return "";
+         #endif
       }
       // clang-format on
 
@@ -165,21 +182,18 @@ private:
       // Delete the factory and dsp
       void Delete();
 
-      union DspTypeUnion {
-         interpreter_dsp* interp;
-         llvm_dsp* llvm;
-      };
-      union DspFactoryTypeUnion {
-         interpreter_dsp_factory* interp;
-         llvm_dsp_factory* llvm;
-      };
+#if BESPOKE_FAUST_USE_LLVM
+      typedef llvm_dsp* DspType;
+      typedef llvm_dsp_factory* DspFactoryType;
+#else
+      typedef interpreter_dsp* DspType;
+      typedef interpreter_dsp_factory* DspFactoryType;
+#endif
 
-      DspTypeUnion mDsp{ 0 };
-      DspFactoryTypeUnion mDspFactory{ 0 };
+      DspType mDsp{ 0 };
+      DspFactoryType mDspFactory{ 0 };
       // have we attempted to create the dsp?
       bool mNeedsDspCleanup = false;
-      // should we use the LLVM version?
-      bool mIsLlvmOptimized = false;
    };
 
    DspContainer mDsp;

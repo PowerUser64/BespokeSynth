@@ -41,8 +41,8 @@ FaustConnector::FaustConnector()
 , IDrawableModule(mUiMinWidth, mUiMinHeight)
 , mDspUi(mUiOriginX, mUiOriginY + mUiControlsHeight + mUiLayoutSpacing, this, this, this)
 , mDspDoubleBuf(
-  FaustDSP(gDefaultFaustProgram(), ShouldOptimize()),
-  FaustDSP(gDefaultFaustProgram(), ShouldOptimize()))
+  FaustDSP(gDefaultFaustProgram()),
+  FaustDSP(gDefaultFaustProgram()))
 {
 }
 
@@ -109,7 +109,7 @@ void FaustConnector::UpdateDspFromEditorBox()
 
 void FaustConnector::UpdateDspFromString(std::string dspString)
 {
-   mDspDoubleBuf.GetBackBuffer().UpdateDspFromString(dspString, ShouldOptimize());
+   mDspDoubleBuf.GetBackBuffer().UpdateDspFromString(dspString);
    CommitDsp();
 }
 
