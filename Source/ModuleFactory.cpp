@@ -524,7 +524,7 @@ ModuleFactory::ModuleFactory()
    REGISTER(AudioSyncer, audiosyncer, kModuleCategory_Audio);
    REGISTER(ChordKeyboard, chordkeyboard, kModuleCategory_Note);
    REGISTER(TapeLooper, tapelooper, kModuleCategory_Audio);
-   REGISTER(FaustConnector, faustconnector, kModuleCategory_Audio);
+   REGISTER(FaustConnector, faust, kModuleCategory_Audio);
 
    //REGISTER_EXPERIMENTAL(MidiPlayer, midiplayer, kModuleCategory_Instrument);
    REGISTER_HIDDEN(Autotalent, autotalent, kModuleCategory_Audio);
@@ -588,13 +588,13 @@ IDrawableModule* ModuleFactory::MakeModule(std::string type)
 
 std::vector<ModuleFactory::Spawnable> ModuleFactory::GetSpawnableModules(ModuleCategory moduleCategory)
 {
-   std::vector<ModuleFactory::Spawnable> modules{ };
+   std::vector<ModuleFactory::Spawnable> modules{};
    for (auto iter = mFactoryMap.begin(); iter != mFactoryMap.end(); ++iter)
    {
       if (iter->second.mCategory == moduleCategory &&
           (!iter->second.mIsHidden || gShowDevModules))
       {
-         ModuleFactory::Spawnable spawnable{ };
+         ModuleFactory::Spawnable spawnable{};
          spawnable.mLabel = iter->first;
          modules.push_back(spawnable);
       }
@@ -606,7 +606,7 @@ std::vector<ModuleFactory::Spawnable> ModuleFactory::GetSpawnableModules(ModuleC
       std::vector<std::string> effects = TheSynth->GetEffectFactory()->GetSpawnableEffects();
       for (const auto& effect : effects)
       {
-         ModuleFactory::Spawnable spawnable{ };
+         ModuleFactory::Spawnable spawnable{};
          spawnable.mLabel = effect;
          spawnable.mDecorator = kEffectChainSuffix;
          spawnable.mSpawnMethod = SpawnMethod::EffectChain;
@@ -652,13 +652,13 @@ namespace
 
 std::vector<ModuleFactory::Spawnable> ModuleFactory::GetSpawnableModules(std::string keys, bool continuousString)
 {
-   std::vector<ModuleFactory::Spawnable> modules{ };
+   std::vector<ModuleFactory::Spawnable> modules{};
    for (auto iter = mFactoryMap.begin(); iter != mFactoryMap.end(); ++iter)
    {
       if ((!iter->second.mIsHidden || gShowDevModules) &&
           CheckHeldKeysMatch(iter->first, keys, continuousString))
       {
-         ModuleFactory::Spawnable spawnable{ };
+         ModuleFactory::Spawnable spawnable{};
          spawnable.mLabel = iter->first;
          modules.push_back(spawnable);
       }
@@ -679,7 +679,7 @@ std::vector<ModuleFactory::Spawnable> ModuleFactory::GetSpawnableModules(std::st
 
    for (int i = 0; i < (int)matchingVsts.size() && i < kMaxQuickspawnVstCount; ++i)
    {
-      ModuleFactory::Spawnable spawnable{ };
+      ModuleFactory::Spawnable spawnable{};
       auto& pluginDesc = matchingVsts[i];
       spawnable.mLabel = pluginDesc.name.toStdString();
       spawnable.mDecorator = "[" + ModuleFactory::Spawnable::GetPluginLabel(pluginDesc) + "]";
@@ -701,7 +701,7 @@ std::vector<ModuleFactory::Spawnable> ModuleFactory::GetSpawnableModules(std::st
    {
       if (CheckHeldKeysMatch(midicontroller, keys, continuousString))
       {
-         ModuleFactory::Spawnable spawnable{ };
+         ModuleFactory::Spawnable spawnable{};
          spawnable.mLabel = midicontroller;
          spawnable.mDecorator = kMidiControllerSuffix;
          spawnable.mSpawnMethod = SpawnMethod::MidiController;
@@ -714,7 +714,7 @@ std::vector<ModuleFactory::Spawnable> ModuleFactory::GetSpawnableModules(std::st
    {
       if (CheckHeldKeysMatch(effect, keys, continuousString))
       {
-         ModuleFactory::Spawnable spawnable{ };
+         ModuleFactory::Spawnable spawnable{};
          spawnable.mLabel = effect;
          spawnable.mDecorator = kEffectChainSuffix;
          spawnable.mSpawnMethod = SpawnMethod::EffectChain;
@@ -866,6 +866,9 @@ std::string ModuleFactory::FixUpTypeName(std::string name)
 
    if (name == "arpsequencer")
       return "rhythmsequencer";
+
+   if (name == "faustconnector")
+      return "faust";
 
    return name;
 }
