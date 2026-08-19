@@ -27,7 +27,6 @@
 #include "Slider.h"
 #include "SynthGlobals.h"
 #include "TextEntry.h"
-#include <cstring>
 #include <sys/poll.h>
 
 /** TODO:
@@ -55,8 +54,6 @@ FaustUI::~FaustUI()
 
 void FaustUI::Impl_DrawControls()
 {
-   mUiListLock.lock();
-
    for (auto& control : mTextEntries)
       if (control.generation == mUiGeneration)
          control.ptr->Draw();
@@ -68,8 +65,6 @@ void FaustUI::Impl_DrawControls()
    for (auto& control : mCheckboxes)
       if (control.generation == mUiGeneration)
          control.ptr->Draw();
-
-   mUiListLock.unlock();
 }
 
 void FaustUI::Impl_CheckboxUpdate(Checkbox* checkbox, double time)
@@ -143,11 +138,12 @@ void FaustUI::ResetCursorAndModuleBounds()
 
 void FaustUI::UpdateUserInterface(FaustDSP& dsp)
 {
-   mUiListLock.lock();
+   // TODO: preserve values when reloading UI
+   // - backup current slider values and default slider values
+   // - restore old slider values in places where the default value also didn't change
    UiConstructionBegin();
    dsp.BuildUserInterface(this);
    UiConstructionComplete();
-   mUiListLock.unlock();
 }
 
 // take note of any controls we have, so we can diff it against the new list
