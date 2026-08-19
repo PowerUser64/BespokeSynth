@@ -194,6 +194,8 @@ target_sources(BespokeSynth PRIVATE
     EuclideanSequencer.h
     EventCanvas.cpp
     EventCanvas.h
+    FaustConnector.cpp
+    FaustConnector.h
     FFT.cpp
     FFT.h
     FFTtoAdditive.cpp
@@ -819,6 +821,12 @@ endif()
 target_include_directories(BespokeSynth PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${Python_INCLUDE_DIRS}
+    )
+
+# TODO(Blake): optionally use the system faust
+target_include_directories(BespokeSynth PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/../libs/faust/architecture/faust/dsp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../libs/faust/architecture/faust/gui"
     )
 
 target_compile_definitions(BespokeSynth PRIVATE
