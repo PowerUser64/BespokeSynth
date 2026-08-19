@@ -22,18 +22,12 @@
 
 #pragma once
 
-// TODO: make this default to interpreter when BESPOKE_FAUST_BACKEND is supported in cmake
-// #ifndef BESPOKE_FAUST_BACKEND
-// #endif
-
-#define BESPOKE_FAUST_BACKEND llvm
+// DEBUG
 #define BESPOKE_FAUST_USE_LLVM true
 
-// #if BESPOKE_FAUST_BACKEND == llvm
-// #define BESPOKE_FAUST_USE_LLVM true
-// #elif BESPOKE_FAUST_BACKEND == interpreter
-// #define BESPOKE_FAUST_USE_LLVM false
-// #endif
+#ifndef BESPOKE_FAUST_USE_LLVM
+#define BESPOKE_FAUST_USE_LLVM false
+#endif
 
 #include "PoliteDoubleBuffer.h"
 #include <array>
@@ -67,6 +61,7 @@ public:
       bool mIrIsInitialized = false;
       bool mIsLlvmOptimized = BESPOKE_FAUST_USE_LLVM;
       std::string mLlvmTarget = "";
+      std::string mDspString = "";
       std::string mIr = "";
    };
 
@@ -84,7 +79,7 @@ public:
 
    // DSP Lifecycle
    void UpdateDspFromString(std::string dspString);
-   void UpdateDspFromIr(FaustIR& ir) { mDsp.UpdateDspFromIr(mFaustErrorString, ir); }
+   void UpdateDspFromIr(FaustIR& ir) { mDsp.UpdateDspFromIr(mFaustErrorString, ir, mFaustFactoryArgv); }
    inline bool IsReady()
    {
       bool hasDsp = mDsp.GetDsp() != 0;
@@ -100,6 +95,7 @@ public:
          .mIrIsInitialized = true,
          .mIsLlvmOptimized = BESPOKE_FAUST_USE_LLVM,
          .mLlvmTarget = mDsp.GetLlvmTarget(),
+         .mDspString = mDspString,
          .mIr = mDsp.GetDspIr(),
       };
    }
@@ -128,7 +124,7 @@ private:
    public:
       // Update the dsp
       void UpdateDsp(std::string& faustErrorString, std::string& dspString, FaustArgv& argv);
-      void UpdateDspFromIr(std::string& faustErrorString, FaustDSP::FaustIR& ir);
+      void UpdateDspFromIr(std::string& faustErrorString, FaustDSP::FaustIR& ir, FaustArgv& argv);
 
       DspContainer(const DspContainer&) = delete;
       DspContainer(DspContainer&&) noexcept;
