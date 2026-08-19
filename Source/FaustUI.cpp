@@ -153,6 +153,7 @@ void FaustUI::UpdateUserInterface(FaustDSP& dsp)
 // take note of any controls we have, so we can diff it against the new list
 void FaustUI::UiConstructionBegin()
 {
+   ofLog() << "UiConstructionBegin";
    ResetCursorAndModuleBounds();
    mUiGeneration += 1;
 }
@@ -160,6 +161,7 @@ void FaustUI::UiConstructionBegin()
 // find any controls that don't exist any more and clean them up
 void FaustUI::UiConstructionComplete()
 {
+   ofLog() << "UiConstructionComplete";
    // TODO: fix control deletion
    // // delete old controls
    // FILTER_CURRENT_GEN_UI_LIST(mTextEntries)
