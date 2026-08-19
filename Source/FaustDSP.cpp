@@ -32,7 +32,6 @@ std::string gDefaultFaustProgram() { return "process = _, _;"; }
 
 // TODO: clean up constructors and assignment op
 FaustDSP::FaustDSP(std::string dspString)
-: mDspString(dspString)
 {
    // TODO: scan faust script directory for other directories that were prefixed with an underscore and make them all libraries
    mFaustLibPath = ofToDataPath("scripts/faust/_stdlib");
@@ -44,6 +43,7 @@ FaustDSP::FaustDSP(std::string dspString)
 
 void FaustDSP::UpdateDspFromString(std::string dspString)
 {
+   mDspString = dspString;
    mDsp.UpdateDsp(mFaustErrorString, dspString, mFaustFactoryArgv);
 
    if (HasError() == false)
@@ -90,21 +90,29 @@ FaustDSP::DspContainer::DspContainer(DspContainer&& other) noexcept
    other.mNeedsDspCleanup = false;
 }
 
-void FaustDSP::DspContainer::UpdateDspFromIr(std::string& faustErrorString, FaustDSP::FaustIR& ir)
+void FaustDSP::DspContainer::UpdateDspFromIr(std::string& faustErrorString, FaustDSP::FaustIR& ir, FaustArgv& argv)
 {
    if (mNeedsDspCleanup)
       Delete();
 
    mNeedsDspCleanup = true;
 
-   if (ir.mIsLlvmOptimized != BESPOKE_FAUST_USE_LLVM)
-      return;
-
+   if (ir.mIsLlvmOptimized == BESPOKE_FAUST_USE_LLVM)
+   {
 #if BESPOKE_FAUST_USE_LLVM
-   mDspFactory = readDSPFactoryFromMachine(ir.mIr, ir.mLlvmTarget, faustErrorString);
+      mDspFactory = readDSPFactoryFromMachine(ir.mIr, ir.mLlvmTarget, faustErrorString);
 #else
-   mDspFactory = readInterpreterDSPFactoryFromBitcode(ir.mIr, faustErrorString);
+      mDspFactory = readInterpreterDSPFactoryFromBitcode(ir.mIr, faustErrorString);
 #endif
+   }
+   else
+   {
+      // if we can't use the IR because it doesn't match our backend, compile it instead
+      ofLog() << "Recompiling faust code due to save data backend mismatch";
+      UpdateDsp(faustErrorString, ir.mDspString, argv);
+   }
+
+
    if (mDspFactory == nullptr)
       return;
    mDsp = mDspFactory->createDSPInstance();
