@@ -28,6 +28,8 @@
 #include <cassert>
 #include <string>
 
+std::string gDefaultFaustProgram() { return "process = _, _;"; }
+
 // TODO: clean up constructors and assignment op
 FaustDSP::FaustDSP(std::string dspString, bool optimize)
 : mDspString(dspString)
@@ -40,7 +42,7 @@ FaustDSP::FaustDSP(std::string dspString, bool optimize)
    mDsp.UpdateDsp(mFaustErrorString, dspString, optimize, mFaustFactoryArgv);
 }
 
-void FaustDSP::UpdateDsp(std::string dspString, bool optimize)
+void FaustDSP::UpdateDspFromString(std::string dspString, bool optimize)
 {
    mDsp.UpdateDsp(mFaustErrorString, dspString, optimize, mFaustFactoryArgv);
 
@@ -78,7 +80,7 @@ void FaustDSP::Process(double time, FaustChannelArray& mInChannels, FaustChannel
 ////////////////////
 
 // Move, then null out `other`
-FaustDSP::DspContainer::DspContainer(DspContainer&& other)
+FaustDSP::DspContainer::DspContainer(DspContainer&& other) noexcept
 : mDsp(other.mDsp)
 , mDspFactory(other.mDspFactory)
 , mNeedsDspCleanup(other.mNeedsDspCleanup)
@@ -87,6 +89,37 @@ FaustDSP::DspContainer::DspContainer(DspContainer&& other)
    other.mDsp.interp = 0;
    other.mDspFactory.interp = 0;
    other.mNeedsDspCleanup = false;
+}
+
+void FaustDSP::DspContainer::UpdateDspFromIr(std::string& faustErrorString, FaustDSP::FaustIR& ir)
+{
+   if (mNeedsDspCleanup)
+      Delete();
+
+   mNeedsDspCleanup = true;
+   mIsLlvmOptimized = ir.mIsLlvmOptimized;
+
+   if (IsOptimized())
+   { // load LLVM dsp factory
+      mDspFactory.llvm = readDSPFactoryFromMachine(ir.mIr, ir.mLlvmTarget, faustErrorString);
+      if (mDspFactory.llvm == nullptr)
+         return;
+      mDsp.llvm = mDspFactory.llvm->createDSPInstance();
+      ofLog() << "Faust: LLVM";
+   }
+   else
+   { // load IR dsp factory
+      mDspFactory.interp = readInterpreterDSPFactoryFromBitcode(ir.mIr, faustErrorString);
+      if (mDspFactory.interp == nullptr)
+         return;
+      mDsp.interp = mDspFactory.interp->createDSPInstance();
+      ofLog() << "Faust: Interpreter";
+   }
+
+   if (GetDsp())
+   {
+      GetDsp()->init(gSampleRate);
+   }
 }
 
 void FaustDSP::DspContainer::UpdateDsp(std::string& faustErrorString, std::string& dspString, bool optimize, FaustArgv& argv)
@@ -115,7 +148,7 @@ void FaustDSP::DspContainer::UpdateDsp(std::string& faustErrorString, std::strin
    }
 
    if (GetDsp())
-   { // this is required
+   {
       GetDsp()->init(gSampleRate);
    }
 }

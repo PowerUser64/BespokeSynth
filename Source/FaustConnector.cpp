@@ -41,8 +41,8 @@ FaustConnector::FaustConnector()
 , IDrawableModule(mUiMinWidth, mUiMinHeight)
 , mDspUi(mUiOriginX, mUiOriginY + mUiControlsHeight + mUiLayoutSpacing, this, this, this)
 , mDspDoubleBuf(
-  FaustDSP("process = _, _;", ShouldOptimize()),
-  FaustDSP("process = _, _;", ShouldOptimize()))
+  FaustDSP(gDefaultFaustProgram(), ShouldOptimize()),
+  FaustDSP(gDefaultFaustProgram(), ShouldOptimize()))
 {
 }
 
@@ -69,22 +69,89 @@ void FaustConnector::CreateUIControls()
 
 void FaustConnector::LoadLayout(const ofxJSONElement& moduleInfo)
 {
-   auto dspString = mModuleSaveData.LoadString("__dsp_editor", moduleInfo, "process = _, _;");
+   ofLog() << "FaustConnector LoadLayout";
+   auto dspString = mModuleSaveData.LoadString("dsp editor", moduleInfo, gDefaultFaustProgram());
 
-   UpdateDspFromString(dspString);
+   if (!moduleInfo["DspSaveData"].isNull())
+   {
+      mDspEditorBox->SetText(moduleInfo["DspSaveData"]["dsp editor"].asString());
+      mDspIr.mIrIsInitialized = moduleInfo["DspSaveData"]["IR"]["mIrIsInitialized"].asBool();
+      mDspIr.mIsLlvmOptimized = moduleInfo["DspSaveData"]["IR"]["mIsLlvmOptimized"].asBool();
+      mDspIr.mLlvmTarget = moduleInfo["DspSaveData"]["IR"]["mLlvmTarget"].asString();
+      mDspIr.mIr = moduleInfo["DspSaveData"]["IR"]["mIr"].asString();
+
+      UpdateDspFromIrOrEditorBox();
+   }
+}
+
+void FaustConnector::SaveLayout(ofxJSONElement& moduleInfo)
+{
+   ofLog() << "FaustConnector SaveLayout";
+
+   { // IR
+      ofxJSONElement dsp;
+      dsp["IR"]["mIrIsInitialized"] = mDspIr.mIrIsInitialized;
+      dsp["IR"]["mIsLlvmOptimized"] = mDspIr.mIsLlvmOptimized;
+      dsp["IR"]["mLlvmTarget"] = mDspIr.mLlvmTarget;
+      dsp["IR"]["mIr"] = mDspIr.mIr;
+      moduleInfo["DspSaveData"] = dsp;
+   }
+
+   // DSP code
+   moduleInfo["DspSaveData"]["dsp editor"] = mDspEditorBox->GetText(true);
 }
 
 void FaustConnector::UpdateDspFromEditorBox()
 {
+   ofLog() << "update from editor box";
    UpdateDspFromString(mDspEditorBox->GetText(true));
 }
 
 void FaustConnector::UpdateDspFromString(std::string dspString)
 {
-   mDspDoubleBuf.GetBackBuffer().UpdateDsp(dspString, ShouldOptimize());
+   mDspDoubleBuf.GetBackBuffer().UpdateDspFromString(dspString, ShouldOptimize());
+   CommitDsp();
+}
+
+void FaustConnector::UpdateDspFromIr()
+{
+   ofLog() << "update from IR";
+   mDspDoubleBuf.GetBackBuffer().UpdateDspFromIr(mDspIr);
+   CommitDsp();
+}
+
+void FaustConnector::UpdateDspFromIrOrEditorBox()
+{
+   if (mDspIr.mIrIsInitialized)
+      UpdateDspFromIr();
+
+   if (mDspDoubleBuf.GetBackBuffer().IsReady() == false)
+   {
+      ofLog() << "Error: Failed to load IR from save state";
+      // corrupted IR in save file? attempt to compile from the raw dsp code
+      UpdateDspFromEditorBox();
+      if (mDspDoubleBuf.GetBackBuffer().IsReady() == false)
+      {
+         ofLog() << "Error: Failed to compile dsp code from save state";
+         // corrupted IR and dsp code in save file? use the default program
+         UpdateDspFromString(gDefaultFaustProgram());
+
+         // now we should definitely have a working program
+         if (!mDspDoubleBuf.GetBackBuffer().IsReady())
+         {
+            ofLog() << "FATAL: Failed to load default faust program";
+            assert(false);
+         }
+      }
+   }
+}
+
+void FaustConnector::CommitDsp()
+{
    if (mDspDoubleBuf.GetBackBuffer().IsReady() == true)
    {
       mDspUi.UpdateUserInterface(mDspDoubleBuf.GetBackBuffer());
+      mDspIr = mDspDoubleBuf.GetBackBuffer().GetDspIr();
       mDspDoubleBuf.SwitchWhenReady();
    }
    else
@@ -136,14 +203,6 @@ void FaustConnector::DrawModule()
 
       mDspEditorBox->Draw();
    }
-}
-
-void FaustConnector::LoadState(FileStreamIn& in, int rev)
-{
-   IDrawableModule::LoadState(in, rev);
-
-   mDspEditorBox->Publish();
-   UpdateDspFromEditorBox();
 }
 
 void FaustConnector::ExecuteCode()
