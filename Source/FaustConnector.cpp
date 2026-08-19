@@ -95,7 +95,7 @@ void FaustConnector::UpdateDspFromString(std::string dspString)
 
 void FaustConnector::HandleFaustError()
 {
-   if (mDspDoubleBuf.GetFrontBuffer().HasError() == false)
+   if (mDspDoubleBuf.GetBackBuffer().HasError() == false)
       return;
 
    ofLog() << "Faust error:" << '\n'
