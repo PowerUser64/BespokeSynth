@@ -83,7 +83,6 @@ private:
    void CommitDsp();
    void HandleFaustError();
    void Impl_Process(double time);
-   inline bool ShouldOptimize() const { return true; }
 
    // UI
    CodeEntry* mDspEditorBox = 0;
