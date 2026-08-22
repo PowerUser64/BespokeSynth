@@ -57,15 +57,19 @@ struct ofColor
 struct ofVec2f
 {
    ofVec2f()
-   {}
+   { }
    ofVec2f(float _x, float _y)
    : x(_x)
    , y(_y)
-   {}
+   { }
    void set(float _x, float _y)
    {
       x = _x;
       y = _y;
+   }
+   ofVec2f operator-()
+   {
+      return ofVec2f(-x, -y);
    }
    ofVec2f operator-(const ofVec2f& other)
    {
