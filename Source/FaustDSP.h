@@ -22,9 +22,6 @@
 
 #pragma once
 
-// DEBUG
-#define BESPOKE_FAUST_USE_LLVM true
-
 #ifndef BESPOKE_FAUST_USE_LLVM
 #define BESPOKE_FAUST_USE_LLVM false
 #endif
