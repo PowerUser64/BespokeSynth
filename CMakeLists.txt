@@ -37,7 +37,11 @@ project(BespokeSynth VERSION 1.3.0 LANGUAGES C CXX ASM)
 # Faust options
 option(BESPOKE_SYSTEM_FAUST "Use system installation of libfaust" OFF)
 set(BESPOKE_FAUST_BACKEND "interpreter" CACHE STRING
-    "Faust backend:\n          'interpreter'    no LLVM (default)\n          'llvm'           try system LLVM, or download if not found\n          'llvm_system'    use system LLVM only\n          'llvm_download'  use LLVM download only"
+    "Faust backend:
+    'interpreter'    no LLVM (default)
+    'llvm'           try system LLVM, or download if not found
+    'llvm_system'    use system LLVM only
+    'llvm_download'  use LLVM download only"
 )
 set(BESPOKE_LLVM_VERSION "18.1.8" CACHE STRING "LLVM version to download")
 set(BESPOKE_LLVM_INSTALL_DIR "${CMAKE_SOURCE_DIR}/ignore/llvm" CACHE PATH "Directory for downloaded LLVM libraries")
