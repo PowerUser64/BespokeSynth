@@ -837,11 +837,39 @@ if(BESPOKE_USE_SYSTEM_FAUST)
         message(FATAL_ERROR "BESPOKE_USE_SYSTEM_FAUST is ON but libfaust was not found on the system")
     endif()
 else()
-    message(STATUS "Linking against bundled static libfaust")
-    target_link_libraries(BespokeSynth PRIVATE staticlib)
-    target_include_directories(BespokeSynth PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/../libs/faust/architecture"
-        )
+    if(BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
+        target_link_libraries(BespokeSynth PRIVATE staticlib z curses tinfo)
+    elseif(BESPOKE_FAUST_BACKEND STREQUAL "llvm" OR
+           BESPOKE_FAUST_BACKEND STREQUAL "llvm_system" OR
+           BESPOKE_FAUST_BACKEND STREQUAL "llvm_download")
+        # The bundled Faust is built with its LLVM backend; switch BespokeSynth
+        # to the LLVM DSP API and link the LLVM obtained by libs/CMakeLists.txt
+        # (a system install, or a downloaded LLVM).
+        # Use =1 here: a literal "true" would expand to the identifier true,
+        # which the C preprocessor treats as 0 in #if, disabling the LLVM path.
+        target_compile_definitions(BespokeSynth PRIVATE BESPOKE_FAUST_USE_LLVM=1)
+        # LLVM headers for the Faust llvm-dsp wrapper / generated DSP code.
+        target_include_directories(BespokeSynth PRIVATE "${LLVM_INCLUDE_DIRS}")
+        # Link the LLVM libraries (absolute static archive paths when
+        # downloaded, -l flags from llvm-config when using a system install;
+        # see Source/cmake/obtain-llvm.cmake).
+        target_link_directories(BespokeSynth PRIVATE "${LLVM_LIB_DIR}")
+        target_link_libraries(BespokeSynth PRIVATE staticlib ${LLVM_LIBS})
+        if(NOT WIN32 AND BESPOKE_LLVM_DOWNLOADED)
+            if(BESPOKE_SYSTEM_ZSTD)
+                # System zstd: link the imported target directly.
+                target_link_libraries(BespokeSynth PRIVATE zstd::libzstd_static)
+            endif()
+            # The bundled zstd archive is linked *inside* the LLVM --start-group
+            # from libs/CMakeLists.txt (see the bundled-zstd block there), so it
+            # is scanned within the group and resolves libLLVMSupport.a
+            # (Compression.cpp)'s ZSTD_* references regardless of CMake ordering.
+            target_link_libraries(BespokeSynth PRIVATE z pthread dl m)
+        endif()
+    else()
+        message(FATAL_ERROR "BESPOKE_FAUST_BACKEND must be 'interpreter', 'llvm', 'llvm_system', or 'llvm_download', got '${BESPOKE_FAUST_BACKEND}'")
+    endif()
+    target_include_directories(BespokeSynth PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../libs/faust/architecture")
 endif()
 
 target_compile_definitions(BespokeSynth PRIVATE

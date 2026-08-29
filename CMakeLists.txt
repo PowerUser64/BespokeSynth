@@ -17,8 +17,7 @@ option(BESPOKE_SYSTEM_JSONCPP "Use system-wide installation of jsoncpp" OFF)
 option(BESPOKE_SYSTEM_TUNING_LIBRARY "Use system installation of tuning-library" OFF)
 option(BESPOKE_SYSTEM_ABLETONLINK "Use system installation of abletonlink" OFF)
 option(BESPOKE_SYSTEM_READERWRITERQUEUE "Use system installation of readerwriterqueue" OFF)
-option(BESPOKE_SYSTEM_FAUST "Use system installation of libfaust" OFF)
-option(LINK_LLVM_STATIC "Link LLVM statically" OFF) # default to linking llvm dynamically
+option(BESPOKE_SYSTEM_ZSTD "Use system installation of zstd" OFF)
 option(BESPOKE_USE_ASAN "Build with ASAN" OFF)
 
 # Global CMake options
@@ -34,6 +33,25 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 
 project(BespokeSynth VERSION 1.3.0 LANGUAGES C CXX ASM)
+
+# Faust options
+option(BESPOKE_SYSTEM_FAUST "Use system installation of libfaust" OFF)
+set(BESPOKE_FAUST_BACKEND "interpreter" CACHE STRING "Faust backend:
+    'interpreter'    no LLVM (default)
+    'llvm'           try system LLVM, or download if not found
+    'llvm_system'    use system LLVM only
+    'llvm_download'  use LLVM download only")
+message(STATUS "Faust backend source: ${BESPOKE_FAUST_BACKEND}")
+
+# Supported Faust backends. The interpreter needs no LLVM; the LLVM backends
+# acquire a system install or download a prebuilt LLVM from the llvm-project
+# GitHub releases and link against it (see Source/cmake/obtain-llvm.cmake).
+if(NOT BESPOKE_FAUST_BACKEND STREQUAL "interpreter" AND
+   NOT BESPOKE_FAUST_BACKEND STREQUAL "llvm" AND
+   NOT BESPOKE_FAUST_BACKEND STREQUAL "llvm_system" AND
+   NOT BESPOKE_FAUST_BACKEND STREQUAL "llvm_download")
+    message(FATAL_ERROR "BESPOKE_FAUST_BACKEND must be 'interpreter', 'llvm', 'llvm_system', or 'llvm_download', got '${BESPOKE_FAUST_BACKEND}'")
+endif()
 
 message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 math(EXPR BESPOKE_BITNESS "${CMAKE_SIZEOF_VOID_P} * 8" OUTPUT_FORMAT DECIMAL)

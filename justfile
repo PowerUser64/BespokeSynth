@@ -2,7 +2,6 @@
 
 # Default values for environment variables
 export BESPOKE_BUILD_TYPE := env("BESPOKE_BUILD_TYPE", "Debug")
-export CMAKE_ADDITIONAL_FLAGS := env("CMAKE_ADDITIONAL_FLAGS", "")
 
 # Simple utility to print out what's being executed before running it, matching just's default format
 echo_do := "
@@ -82,9 +81,20 @@ configure *cmake_args:
       "$@"
 
 
-# Run (with an optional command prefix, such as `gdb`)
+# Run the binary
+run:
+   #!/usr/bin/env sh
+   # include: {{echo_do}}
+
+   just _build_if_needed
+
+   # Run the program
+   echo_do "$(just _print_binary_name)"
+
+
+# Run with prefix (accepts a command prefix, such as `gdb`)
 [positional-arguments]
-run *command_prefix:
+run-pre *command_prefix:
    #!/usr/bin/env sh
    # include: {{echo_do}}
 
@@ -118,9 +128,21 @@ faustc:
    done
 
 
+# compile against each supported faust backend
+test-all-faust-backends:
+   #!/usr/bin/env sh
+   mkdir -p ignore
+   for backend in interpreter llvm_download llvm; do
+      just clean configure -DBESPOKE_FAUST_BACKEND=$backend &&
+         just build &&
+         test -f "$(just _print_binary_name)"
+      echo "Compile done ($backend backend)."
+   done
+
+
 # Clean the build files
 clean:
-   rm -r ignore/build
+   rm -r ignore/build || true
 
 
 ##
