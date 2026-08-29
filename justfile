@@ -2,7 +2,6 @@
 
 # Default values for environment variables
 export BESPOKE_BUILD_TYPE := env("BESPOKE_BUILD_TYPE", "Debug")
-export CMAKE_ADDITIONAL_FLAGS := env("CMAKE_ADDITIONAL_FLAGS", "")
 
 # Simple utility to print out what's being executed before running it, matching just's default format
 echo_do := "
