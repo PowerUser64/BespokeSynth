@@ -42,21 +42,94 @@ add_subdirectory(xwax EXCLUDE_FROM_ALL)
 
 if (NOT BESPOKE_USE_SYSTEM_FAUST)
   message(STATUS "Using bundled libfaust")
-  include(${CMAKE_CURRENT_SOURCE_DIR}/faust/build/backends/interp.cmake)
-  set(INCLUDE_STATIC     ON CACHE BOOL "" FORCE)
-  # Disable some unneeded faust features
-  set(INCLUDE_EXECUTABLE OFF)
-  set(INCLUDE_OSC        OFF)
-  set(INCLUDE_HTTP       OFF)
-  set(INCLUDE_EMCC       OFF)
-  set(INCLUDE_WASM_GLUE  OFF)
-  message(STATUS "Faust LLVM backend enabled")
-  set(LLVM_BACKEND COMPILER STATIC DYNAMIC)
+    set(INCLUDE_STATIC     ON CACHE BOOL "" FORCE)
+    set(INCLUDE_EXECUTABLE OFF)
+    set(INCLUDE_OSC        OFF)
+    set(INCLUDE_HTTP       OFF)
+    set(INCLUDE_EMCC       OFF)
+    set(INCLUDE_WASM_GLUE  OFF)
+  if(BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
+    message(STATUS "Faust interpreter backend enabled")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/faust/build/backends/interp.cmake)
+    set(INCLUDE_LLVM      OFF CACHE BOOL   "" FORCE)
+    set(LLVM_INCLUDE_DIRS ""  CACHE STRING "" FORCE)
+  else()
+    message(STATUS "Faust LLVM backend enabled")
+    set(INCLUDE_LLVM       ON CACHE BOOL "" FORCE)
+    set(LLVM_BACKEND COMPILER STATIC DYNAMIC)
+  endif()
+
+  # If we downloaded LLVM, point faust's build at it and prevent its
+  # llvm_config() macro from re-running (which would FATAL_ERROR without
+  # system LLVM).  All LLVM_* variables were already set by DownloadLLVM.cmake.
+  if(BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
+    # Interpreter backend doesn't need LLVM variables
+  else()
+    if(BESPOKE_LLVM_DOWNLOADED)
+      set(LLVM_DIR "${BESPOKE_LLVM_INSTALL_DIR}/lib/cmake/llvm" CACHE PATH "" FORCE)
+      set(LLVM_INCLUDE_DIRS "${BESPOKE_LLVM_INSTALL_DIR}/include" CACHE PATH "" FORCE)
+      set(LLVM_LIB_DIR "${BESPOKE_LLVM_INSTALL_DIR}/lib" CACHE PATH "" FORCE)
+      set(USE_LLVM_CONFIG OFF CACHE BOOL "" FORCE)
+    else()
+      # System LLVM: use system llvm-config directly
+      find_program(LLVM_CONFIG NAMES llvm-config)
+      if(LLVM_CONFIG)
+        execute_process(
+          COMMAND ${LLVM_CONFIG} --cmakedir
+          OUTPUT_VARIABLE _SYSTEM_LLVM_CMAKEDIR
+          OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        execute_process(
+          COMMAND ${LLVM_CONFIG} --includedir
+          OUTPUT_VARIABLE _SYSTEM_LLVM_INCLUDEDIR
+          OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        execute_process(
+          COMMAND ${LLVM_CONFIG} --libdir
+          OUTPUT_VARIABLE _SYSTEM_LLVM_LIBDIR
+          OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+        set(LLVM_CONFIG "${LLVM_CONFIG}" CACHE FILEPATH "" FORCE)
+        set(LLVM_DIR "${_SYSTEM_LLVM_CMAKEDIR}" CACHE PATH "" FORCE)
+        set(LLVM_INCLUDE_DIRS "${_SYSTEM_LLVM_INCLUDEDIR}" CACHE PATH "" FORCE)
+        set(LLVM_LIB_DIR "${_SYSTEM_LLVM_LIBDIR}" CACHE PATH "" FORCE)
+      endif()
+    endif()
+  endif()
+
   add_subdirectory(
     ${CMAKE_CURRENT_SOURCE_DIR}/faust/build
     ${CMAKE_BINARY_DIR}/faust
-    EXCLUDE_FROM_ALL
     )
+
+  # Embed LLVM static libraries into libfaust when using downloaded LLVM
+  if(BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
+    # Interpreter backend doesn't need LLVM embedding
+  else()
+    if(BESPOKE_LLVM_DOWNLOADED)
+      if(WIN32)
+        set(_llvm_wrapper "llvm-config-wrapper.bat")
+      else()
+        set(_llvm_wrapper "llvm-config-wrapper.sh")
+      endif()
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/faust/build/lib/libfaustwithllvm.a
+        COMMAND ${CMAKE_COMMAND} -E env
+          "LLVM_CONFIG=${BESPOKE_LLVM_INSTALL_DIR}/bin/${_llvm_wrapper}"
+          "LLVM_LIB_DIR=${BESPOKE_LLVM_INSTALL_DIR}/lib"
+          make -f Make.llvm.static
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/faust/build
+        COMMENT "Embed LLVM static libraries with libfaust (using downloaded LLVM)"
+        VERBATIM
+      )
+      add_custom_target(embed_llvm_in_faust ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/faust/build/lib/libfaustwithllvm.a)
+
+      if(TARGET staticlib)
+        add_dependencies(embed_llvm_in_faust staticlib)
+      endif()
+    endif()
+  endif()
+
 else()
   message(STATUS "Using system-provided libfaust")
 endif()
