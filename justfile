@@ -118,6 +118,24 @@ faustc:
    done
 
 
+# compile against all faust backends
+test-all-faust-backends:
+   #!/usr/bin/env fish
+   set statuses
+   for backend in interpreter llvm{_{system,download},}
+      begin
+         rm -rf ./ignore/llvm
+         mkdir -p ignore
+         just clean configure -DBESPOKE_FAUST_BACKEND=$b
+         and just build
+         and echodo test -f (just _print_binary_name)
+         set -a statuses "$backend: code $status, log: ./ignore/$backend.log"
+      end &| tee ./ignore/$backend.log
+   end
+   echo "Compile done. Exit statuses:"
+   printf '   %s\n' $statuses
+
+
 # Clean the build files
 clean:
    rm -r ignore/build || true
