@@ -120,7 +120,7 @@ faustc:
 
 # Clean the build files
 clean:
-   rm -r ignore/build
+   rm -r ignore/build || true
 
 
 ##

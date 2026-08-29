@@ -837,11 +837,24 @@ if(BESPOKE_USE_SYSTEM_FAUST)
         message(FATAL_ERROR "BESPOKE_USE_SYSTEM_FAUST is ON but libfaust was not found on the system")
     endif()
 else()
-    message(STATUS "Linking against bundled static libfaust")
-    target_link_libraries(BespokeSynth PRIVATE staticlib)
-    target_include_directories(BespokeSynth PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/../libs/faust/architecture"
-        )
+    if(BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
+        target_link_libraries(BespokeSynth PRIVATE staticlib z curses tinfo)
+    else()
+        # LLVM backend
+        target_link_libraries(BespokeSynth PRIVATE  ${CMAKE_CURRENT_SOURCE_DIR}/../libs/faust/build/lib/libfaustwithllvm.a z curses tinfo)
+        if(BESPOKE_LLVM_DOWNLOADED)
+            add_dependencies(BespokeSynth embed_llvm_in_faust)
+            target_link_directories(BespokeSynth PRIVATE ${BESPOKE_LLVM_INSTALL_DIR}/lib)
+        endif()
+        message(STATUS "Linking against bundled static libfaust")
+    endif()
+    target_include_directories(BespokeSynth PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../libs/faust/architecture")
+endif()
+# toggle between faust and LLVM in the code
+if(BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
+    target_compile_definitions(BespokeSynth PRIVATE BESPOKE_FAUST_USE_LLVM=false)
+else()
+    target_compile_definitions(BespokeSynth PRIVATE BESPOKE_FAUST_USE_LLVM=true)
 endif()
 
 target_compile_definitions(BespokeSynth PRIVATE

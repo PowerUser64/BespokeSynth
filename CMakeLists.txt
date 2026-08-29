@@ -17,7 +17,6 @@ option(BESPOKE_SYSTEM_JSONCPP "Use system-wide installation of jsoncpp" OFF)
 option(BESPOKE_SYSTEM_TUNING_LIBRARY "Use system installation of tuning-library" OFF)
 option(BESPOKE_SYSTEM_ABLETONLINK "Use system installation of abletonlink" OFF)
 option(BESPOKE_SYSTEM_READERWRITERQUEUE "Use system installation of readerwriterqueue" OFF)
-option(BESPOKE_SYSTEM_FAUST "Use system installation of libfaust" OFF)
 option(LINK_LLVM_STATIC "Link LLVM statically" OFF) # default to linking llvm dynamically
 option(BESPOKE_USE_ASAN "Build with ASAN" OFF)
 
@@ -34,6 +33,30 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 
 project(BespokeSynth VERSION 1.3.0 LANGUAGES C CXX ASM)
+
+# Faust options
+option(BESPOKE_SYSTEM_FAUST "Use system installation of libfaust" OFF)
+set(BESPOKE_FAUST_BACKEND "interpreter" CACHE STRING
+    "Faust backend:\n          'interpreter'    no LLVM (default)\n          'llvm'           try system LLVM, or download if not found\n          'llvm_system'    use system LLVM only\n          'llvm_download'  use LLVM download only"
+)
+set(BESPOKE_LLVM_VERSION "18.1.8" CACHE STRING "LLVM version to download")
+set(BESPOKE_LLVM_INSTALL_DIR "${CMAKE_SOURCE_DIR}/ignore/llvm" CACHE PATH "Directory for downloaded LLVM libraries")
+message(STATUS "Faust backend source: ${BESPOKE_FAUST_BACKEND}")
+
+# Validate BESPOKE_FAUST_BACKEND and call obtain_llvm (detect or download)
+if(NOT BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
+    if(BESPOKE_FAUST_BACKEND STREQUAL "llvm_system")
+        set(_LLVM_MODE "never")
+    elseif(BESPOKE_FAUST_BACKEND STREQUAL "llvm_download")
+        set(_LLVM_MODE "always")
+    elseif(BESPOKE_FAUST_BACKEND STREQUAL "llvm")
+        set(_LLVM_MODE "detect")
+    else()
+        message(FATAL_ERROR "BESPOKE_FAUST_BACKEND must be 'interpreter', 'llvm', 'llvm_download', or 'llvm_system', got '${BESPOKE_FAUST_BACKEND}'")
+    endif()
+    include(Source/cmake/obtain-llvm.cmake)
+    bespoke_obtain_llvm("${_LLVM_MODE}")
+endif()
 
 message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 math(EXPR BESPOKE_BITNESS "${CMAKE_SIZEOF_VOID_P} * 8" OUTPUT_FORMAT DECIMAL)
