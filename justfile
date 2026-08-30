@@ -81,9 +81,20 @@ configure *cmake_args:
       "$@"
 
 
-# Run (with an optional command prefix, such as `gdb`)
+# Run the binary
+run:
+   #!/usr/bin/env sh
+   # include: {{echo_do}}
+
+   just _build_if_needed
+
+   # Run the program
+   echo_do "$(just _print_binary_name)"
+
+
+# Run with prefix (accepts a command prefix, such as `gdb`)
 [positional-arguments]
-run *command_prefix:
+run-pre *command_prefix:
    #!/usr/bin/env sh
    # include: {{echo_do}}
 
