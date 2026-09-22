@@ -81,6 +81,7 @@ jobs:
           sudo apt-get update
 
           sudo apt-get install -y \
+              llvm-defaults \
               devscripts \
               libxcb-cursor-dev \
               libxcb-keysyms1-dev \
@@ -302,29 +303,29 @@ jobs:
       - bash: |
           set -e
           set -x
-          
+
           short_hash=`git rev-parse --short=7 HEAD`
-          
+
           mkdir -p releases
           ls $(System.DefaultWorkingDirectory)/git_info
-          
+
           mv *.zip *.dmg *.gz releases
-          
+
           cd releases
           for f in *.*; do mv -- "$f" "${f%.*}_${short_hash}_$(date +%F).${f##*.}"; done
           cd ..
-          
+
           echo "bespoke nightly build $(date +%F)" >> releases/ReleaseNotes.md
           echo " " >> releases/ReleaseNotes.md
           echo "<pre>" >> releases/ReleaseNotes.md
           cat $(System.DefaultWorkingDirectory)/git_info/git_nightly_recent_five >> releases/ReleaseNotes.md
           echo " " >> releases/ReleaseNotes.md
           echo "</pre>" >> releases/ReleaseNotes.md
-          
+
           echo "---------------"
           cat releases/ReleaseNotes.md
           echo "---------------"
-          
+
           ls -alFh releases
         displayName: Prepare Release
 
