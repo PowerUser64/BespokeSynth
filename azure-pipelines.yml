@@ -81,7 +81,6 @@ jobs:
           sudo apt-get update
 
           sudo apt-get install -y \
-              clang-format-22 \
               devscripts \
               libxcb-cursor-dev \
               libxcb-keysyms1-dev \
@@ -112,7 +111,7 @@ jobs:
               libusb-1.0.0-dev \
               patchelf
 
-        sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-22 100
+        # sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-22 100
 
         condition: variables.isLinux
         displayName: linux - run apt-get
