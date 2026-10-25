@@ -128,23 +128,16 @@ faustc:
    done
 
 
-# compile against all faust backends
+# compile against each supported faust backend
 test-all-faust-backends:
    #!/usr/bin/env sh
-   out="$(mktemp)"
+   mkdir -p ignore
    for backend in interpreter llvm_download llvm; do
-      {
-         rm -rf ./ignore/llvm
-         mkdir -p ignore
-         just clean configure -DBESPOKE_FAUST_BACKEND=$backend &&
-            just build &&
-            echodo test -f "$(just _print_binary_name)"
-         echo >> "$out" "   $backend: code $status, log: ./ignore/$backend.log"
-      } 2>&1 | tee ./ignore/$backend.log
+      just clean configure -DBESPOKE_FAUST_BACKEND=$backend &&
+         just build &&
+         test -f "$(just _print_binary_name)"
+      echo "Compile done ($backend backend)."
    done
-   echo "Compile done. Exit statuses:"
-   cat "$out"
-   rm "$out"
 
 
 # Clean the build files

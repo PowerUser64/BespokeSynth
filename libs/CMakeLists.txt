@@ -15,6 +15,20 @@ if(NOT BESPOKE_SYSTEM_READERWRITERQUEUE)
   message(STATUS "Using bundled readerwriterqueue")
 endif()
 add_subdirectory(scalable-font2 EXCLUDE_FROM_ALL)
+if(NOT BESPOKE_SYSTEM_ZSTD)
+  message(STATUS "Using bundled zstd")
+  # Build only the static libzstd from upstream's own CMake (no shared lib,
+  # no CLI, tests, or contrib). Target name is libzstd_static.
+  set(ZSTD_BUILD_SHARED OFF  CACHE BOOL "" FORCE)
+  set(ZSTD_BUILD_STATIC ON   CACHE BOOL "" FORCE)
+  set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
+  set(ZSTD_BUILD_TESTS   OFF CACHE BOOL "" FORCE)
+  set(ZSTD_BUILD_CONTRIB OFF CACHE BOOL "" FORCE)
+  add_subdirectory(zstd/build/cmake EXCLUDE_FROM_ALL)
+else()
+  message(STATUS "Using system installed zstd")
+  find_package(zstd REQUIRED)
+endif()
 
 set(PYBIND11_NOPYTHON TRUE)
 if(NOT BESPOKE_SYSTEM_PYBIND11)
@@ -53,82 +67,67 @@ if (NOT BESPOKE_USE_SYSTEM_FAUST)
     include(${CMAKE_CURRENT_SOURCE_DIR}/faust/build/backends/interp.cmake)
     set(INCLUDE_LLVM      OFF CACHE BOOL   "" FORCE)
     set(LLVM_INCLUDE_DIRS ""  CACHE STRING "" FORCE)
-  else()
-    message(STATUS "Faust LLVM backend enabled")
-    set(INCLUDE_LLVM       ON CACHE BOOL "" FORCE)
-    set(LLVM_BACKEND COMPILER STATIC DYNAMIC)
-  endif()
-
-  # If we downloaded LLVM, point faust's build at it and prevent its
-  # llvm_config() macro from re-running (which would FATAL_ERROR without
-  # system LLVM).  All LLVM_* variables were already set by DownloadLLVM.cmake.
-  if(BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
-    # Interpreter backend doesn't need LLVM variables
-  else()
-    if(BESPOKE_LLVM_DOWNLOADED)
-      set(LLVM_DIR "${BESPOKE_LLVM_INSTALL_DIR}/lib/cmake/llvm" CACHE PATH "" FORCE)
-      set(LLVM_INCLUDE_DIRS "${BESPOKE_LLVM_INSTALL_DIR}/include" CACHE PATH "" FORCE)
-      set(LLVM_LIB_DIR "${BESPOKE_LLVM_INSTALL_DIR}/lib" CACHE PATH "" FORCE)
-      set(USE_LLVM_CONFIG OFF CACHE BOOL "" FORCE)
+  elseif(BESPOKE_FAUST_BACKEND STREQUAL "llvm" OR
+         BESPOKE_FAUST_BACKEND STREQUAL "llvm_system" OR
+         BESPOKE_FAUST_BACKEND STREQUAL "llvm_download")
+    message(STATUS "Faust LLVM backend enabled (${BESPOKE_FAUST_BACKEND})")
+    # Acquire LLVM: a system install only (llvm_system), a system install with
+    # a download fallback (llvm), or a download only (llvm_download), then feed
+    # its layout to the Faust build below.
+    if(BESPOKE_FAUST_BACKEND STREQUAL "llvm_system")
+      set(_llvm_mode "never")
+    elseif(BESPOKE_FAUST_BACKEND STREQUAL "llvm")
+      set(_llvm_mode "detect")
     else()
-      # System LLVM: use system llvm-config directly
-      find_program(LLVM_CONFIG NAMES llvm-config)
-      if(LLVM_CONFIG)
-        execute_process(
-          COMMAND ${LLVM_CONFIG} --cmakedir
-          OUTPUT_VARIABLE _SYSTEM_LLVM_CMAKEDIR
-          OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
-        execute_process(
-          COMMAND ${LLVM_CONFIG} --includedir
-          OUTPUT_VARIABLE _SYSTEM_LLVM_INCLUDEDIR
-          OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
-        execute_process(
-          COMMAND ${LLVM_CONFIG} --libdir
-          OUTPUT_VARIABLE _SYSTEM_LLVM_LIBDIR
-          OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
-        set(LLVM_CONFIG "${LLVM_CONFIG}" CACHE FILEPATH "" FORCE)
-        set(LLVM_DIR "${_SYSTEM_LLVM_CMAKEDIR}" CACHE PATH "" FORCE)
-        set(LLVM_INCLUDE_DIRS "${_SYSTEM_LLVM_INCLUDEDIR}" CACHE PATH "" FORCE)
-        set(LLVM_LIB_DIR "${_SYSTEM_LLVM_LIBDIR}" CACHE PATH "" FORCE)
+      set(_llvm_mode "always")
+    endif()
+    include(${CMAKE_SOURCE_DIR}/Source/cmake/obtain-llvm.cmake)
+    bespoke_obtain_llvm("${_llvm_mode}")
+    if(BESPOKE_LLVM_DOWNLOADED)
+      if(NOT WIN32 AND NOT BESPOKE_SYSTEM_ZSTD)
+        # LLVM's libLLVMSupport.a (Compression.cpp) references the ZSTD_* API.
+        # Faust's staticlib links ${LLVM_LIBS} and CMake propagates that PRIVATE
+        # link (with the --start-group) to BespokeSynth. GNU ld scans static
+        # archives left-to-right, so the bundled zstd archive must sit *inside*
+        # the --start-group (right before --end-group): the group is rescanned
+        # until no new symbols appear, resolving Compression.cpp's ZSTD_*
+        # references regardless of CMake's ordering of the link line.
+        get_target_property(_zstd_dir libzstd_static BINARY_DIR)
+        get_target_property(_zstd_out libzstd_static OUTPUT_NAME)
+        set(_zstd_archive "${_zstd_dir}/lib${_zstd_out}.a")
+        list(FIND LLVM_LIBS "-Wl,--end-group" _grp_idx)
+        if(_grp_idx GREATER -1)
+            list(INSERT LLVM_LIBS ${_grp_idx} "${_zstd_archive}")
+        endif()
       endif()
     endif()
+    include(${CMAKE_SOURCE_DIR}/Source/cmake/llvm-backends.cmake)
+    set(INCLUDE_LLVM      ON  CACHE BOOL   "" FORCE)
+    # Downloaded LLVM is linked as static archives; a system install may be
+    # static or shared (llvm-config picks whichever it ships).
+    if(BESPOKE_LLVM_LINK_SHARED STREQUAL "shared")
+      set(LINK_LLVM_STATIC OFF CACHE BOOL "" FORCE)
+    else()
+      set(LINK_LLVM_STATIC ON  CACHE BOOL "" FORCE)
+    endif()
+    # Don't let Faust's post-build combine the LLVM archives into libfaust.a;
+    # we link the LLVM libraries directly from BespokeSynth instead.
+    set(INCLUDE_LLVM_STATIC_IN_ARCHIVE OFF CACHE BOOL "" FORCE)
+    if(BESPOKE_LLVM_DOWNLOADED)
+      message(STATUS "Using downloaded LLVM ${LLVM_PACKAGE_VERSION} at ${LLVM_DIR}")
+    else()
+      message(STATUS "Using system LLVM ${LLVM_PACKAGE_VERSION} at ${LLVM_DIR}")
+    endif()
+    message(STATUS "LLVM include dirs: ${LLVM_INCLUDE_DIRS}")
+    message(STATUS "LLVM lib dir: ${LLVM_LIB_DIR}")
+  else()
+    message(FATAL_ERROR "BESPOKE_FAUST_BACKEND must be 'interpreter', 'llvm', 'llvm_system', or 'llvm_download', got '${BESPOKE_FAUST_BACKEND}'")
   endif()
 
   add_subdirectory(
     ${CMAKE_CURRENT_SOURCE_DIR}/faust/build
     ${CMAKE_BINARY_DIR}/faust
     )
-
-  # Embed LLVM static libraries into libfaust when using downloaded LLVM
-  if(BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
-    # Interpreter backend doesn't need LLVM embedding
-  else()
-    if(BESPOKE_LLVM_DOWNLOADED)
-      if(WIN32)
-        set(_llvm_wrapper "llvm-config-wrapper.bat")
-      else()
-        set(_llvm_wrapper "llvm-config-wrapper.sh")
-      endif()
-      add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/faust/build/lib/libfaustwithllvm.a
-        COMMAND ${CMAKE_COMMAND} -E env
-          "LLVM_CONFIG=${BESPOKE_LLVM_INSTALL_DIR}/bin/${_llvm_wrapper}"
-          "LLVM_LIB_DIR=${BESPOKE_LLVM_INSTALL_DIR}/lib"
-          make -f Make.llvm.static
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/faust/build
-        COMMENT "Embed LLVM static libraries with libfaust (using downloaded LLVM)"
-        VERBATIM
-      )
-      add_custom_target(embed_llvm_in_faust ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/faust/build/lib/libfaustwithllvm.a)
-
-      if(TARGET staticlib)
-        add_dependencies(embed_llvm_in_faust staticlib)
-      endif()
-    endif()
-  endif()
 
 else()
   message(STATUS "Using system-provided libfaust")

@@ -29,3 +29,6 @@
 [submodule "resource/userdata_original/scripts/faust/_stdlib"]
 	path = resource/userdata_original/scripts/faust/_stdlib
 	url = https://github.com/grame-cncm/faustlibraries
+[submodule "libs/zstd"]
+	path = libs/zstd
+	url = https://github.com/facebook/zstd.git
