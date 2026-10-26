@@ -853,7 +853,9 @@ else()
         target_link_libraries(BespokeSynth PRIVATE staticlib ${LLVM_LIBS})
         if(NOT WIN32)
             # LLVM's static archives reference these system libraries on Unix.
-            target_link_libraries(BespokeSynth PRIVATE z zstd xml2 ncurses pthread dl m)
+            # (z/curses/tinfo were already needed by the interpreter build; zstd
+            # and xml2 are the new ones required by LLVM's static archives.)
+            target_link_libraries(BespokeSynth PRIVATE z zstd xml2 pthread dl m)
         endif()
     else()
         message(FATAL_ERROR "BESPOKE_FAUST_BACKEND must be 'interpreter' or 'llvm_download', got '${BESPOKE_FAUST_BACKEND}'")
