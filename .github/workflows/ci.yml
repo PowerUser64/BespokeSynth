@@ -1,0 +1,85 @@
+# BespokeSynth CI
+#
+# Plain build check: verify that BespokeSynth compiles on Linux, macOS, and
+# Windows. Runs on every push to any branch and on every pull request.
+#
+# This is intentionally minimal and uses standard GitHub Actions practices:
+# configure with CMake and build the BespokeSynth target. No packaging,
+# code signing, or artifact publishing.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-22.04
+          - macos-14
+          - windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3-dev \
+            devscripts \
+            libxcb-cursor-dev \
+            libxcb-keysyms1-dev \
+            libxcb-util-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            ninja-build \
+            xcb \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0 \
+            libwebkit2gtk-4.0-dev \
+            libcurl4-openssl-dev \
+            alsa \
+            alsa-tools \
+            libasound2-dev \
+            libjack-dev \
+            libfreetype6-dev \
+            libxinerama-dev \
+            libxcb-xinerama0 \
+            libxinerama1 \
+            x11proto-xinerama-dev \
+            libxrandr-dev \
+            libgl1-mesa-dev \
+            libxcursor-dev \
+            libxcursor1 \
+            libxcb-cursor-dev \
+            libxcb-cursor0 \
+            libusb-1.0.0-dev \
+            patchelf
+
+      - name: Configure CMake
+        run: |
+          case "${{ matrix.os }}" in
+            ubuntu-*)   CMAKE_ARGS="-GNinja" ;;
+            macos-*)    CMAKE_ARGS="" ;;
+            windows-*)  CMAKE_ARGS="-A x64" ;;
+          esac
+          cmake -B build -DCMAKE_BUILD_TYPE=Release $CMAKE_ARGS
+
+      - name: Build BespokeSynth
+        run: |
+          cmake --build build --config Release --target BespokeSynth --parallel 4
