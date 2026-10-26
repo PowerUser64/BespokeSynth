@@ -837,10 +837,27 @@ if(BESPOKE_USE_SYSTEM_FAUST)
         message(FATAL_ERROR "BESPOKE_USE_SYSTEM_FAUST is ON but libfaust was not found on the system")
     endif()
 else()
-    if(NOT BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
-        message(FATAL_ERROR "BESPOKE_FAUST_BACKEND must be 'interpreter' (LLVM support has been removed), got '${BESPOKE_FAUST_BACKEND}'")
+    if(BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
+        target_link_libraries(BespokeSynth PRIVATE staticlib z curses tinfo)
+    elseif(BESPOKE_FAUST_BACKEND STREQUAL "llvm_download")
+        # The bundled Faust is built with its LLVM backend; switch BespokeSynth
+        # to the LLVM DSP API and link the downloaded LLVM.
+        # Use =1 here: a literal "true" would expand to the identifier true,
+        # which the C preprocessor treats as 0 in #if, disabling the LLVM path.
+        target_compile_definitions(BespokeSynth PRIVATE BESPOKE_FAUST_USE_LLVM=1)
+        # LLVM headers for the Faust llvm-dsp wrapper / generated DSP code.
+        target_include_directories(BespokeSynth PRIVATE "${LLVM_INCLUDE_DIRS}")
+        # Link the downloaded LLVM static archives (absolute paths on both
+        # Unix and MSVC; see Source/cmake/obtain-llvm.cmake).
+        target_link_directories(BespokeSynth PRIVATE "${LLVM_LIB_DIR}")
+        target_link_libraries(BespokeSynth PRIVATE staticlib ${LLVM_LIBS})
+        if(NOT WIN32)
+            # LLVM's static archives reference these system libraries on Unix.
+            target_link_libraries(BespokeSynth PRIVATE z zstd xml2 ncurses pthread dl m)
+        endif()
+    else()
+        message(FATAL_ERROR "BESPOKE_FAUST_BACKEND must be 'interpreter' or 'llvm_download', got '${BESPOKE_FAUST_BACKEND}'")
     endif()
-    target_link_libraries(BespokeSynth PRIVATE staticlib z curses tinfo)
     target_include_directories(BespokeSynth PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../libs/faust/architecture")
 endif()
 

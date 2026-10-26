@@ -35,13 +35,15 @@ project(BespokeSynth VERSION 1.3.0 LANGUAGES C CXX ASM)
 
 # Faust options
 option(BESPOKE_SYSTEM_FAUST "Use system installation of libfaust" OFF)
-set(BESPOKE_FAUST_BACKEND "interpreter" CACHE STRING "Faust backend: 'interpreter' (no LLVM, default)")
+set(BESPOKE_FAUST_BACKEND "interpreter" CACHE STRING "Faust backend: 'interpreter' (no LLVM, default), 'llvm_download' (download and link LLVM from github releases)")
 message(STATUS "Faust backend source: ${BESPOKE_FAUST_BACKEND}")
 
-# LLVM has been removed from the build system. The only supported Faust
-# backend is the interpreter (no LLVM).
-if(NOT BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
-    message(FATAL_ERROR "BESPOKE_FAUST_BACKEND must be 'interpreter' (LLVM support has been removed), got '${BESPOKE_FAUST_BACKEND}'")
+# Supported Faust backends. The interpreter needs no LLVM; llvm_download
+# downloads a prebuilt LLVM from the llvm-project GitHub releases and links
+# against it (see Source/cmake/obtain-llvm.cmake).
+if(NOT BESPOKE_FAUST_BACKEND STREQUAL "interpreter" AND
+   NOT BESPOKE_FAUST_BACKEND STREQUAL "llvm_download")
+    message(FATAL_ERROR "BESPOKE_FAUST_BACKEND must be 'interpreter' or 'llvm_download', got '${BESPOKE_FAUST_BACKEND}'")
 endif()
 
 message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")

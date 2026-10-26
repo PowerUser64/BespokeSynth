@@ -128,14 +128,16 @@ faustc:
    done
 
 
-# compile against the faust backend (LLVM backends were removed; only interpreter remains)
+# compile against each supported faust backend
 test-all-faust-backends:
    #!/usr/bin/env sh
    mkdir -p ignore
-   just clean configure -DBESPOKE_FAUST_BACKEND=interpreter &&
-      just build &&
-      test -f "$(just _print_binary_name)"
-   echo "Compile done (interpreter backend)."
+   for backend in interpreter llvm_download; do
+      just clean configure -DBESPOKE_FAUST_BACKEND=$backend &&
+         just build &&
+         test -f "$(just _print_binary_name)"
+      echo "Compile done ($backend backend)."
+   done
 
 
 # Clean the build files
