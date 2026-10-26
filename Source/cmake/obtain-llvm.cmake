@@ -93,6 +93,7 @@ function(bespoke_download_llvm)
         # C++ llvm:: references).  Link them all as absolute paths.
         file(GLOB _llvm_archives "${_llvm_dir}/lib/LLVM*.lib")
         list(FILTER _llvm_archives EXCLUDE REGEX ".*LLVM-C\\.lib$")
+        bespoke_filter_tool_archives(_llvm_archives)
         set(LLVM_LIBS "${_llvm_archives}" PARENT_SCOPE)
     else()
         # Headers need the __STDC_* macros so LLVM's generated config headers parse.
@@ -101,6 +102,7 @@ function(bespoke_download_llvm)
         # The static LLVM archives are what the GitHub prebuilt tarballs ship (there
         # is no shared libLLVM.so), so collect them all as absolute paths.
         file(GLOB _llvm_archives "${_llvm_dir}/lib/libLLVM*.a")
+        bespoke_filter_tool_archives(_llvm_archives)
         if(APPLE)
             # Apple's ld does not support --start-group; pass the archives
             # plainly (may need -Wl,-all_load, untested).
@@ -111,4 +113,13 @@ function(bespoke_download_llvm)
             set(LLVM_LIBS "-Wl,--start-group;${_llvm_archives};-Wl,--end-group" PARENT_SCOPE)
         endif()
     endif()
+endfunction()
+
+# Drop LLVM component archives that are standalone developer tools and not
+# used by Faust's LLVM backend.  This avoids pulling in extra system library
+# dependencies (e.g. libxml2, only referenced by libLLVMWindowsManifest) and
+# keeps the link line and binary smaller.
+function(bespoke_filter_tool_archives ARCHIVE_LIST)
+    list(FILTER ${ARCHIVE_LIST} EXCLUDE REGEX "libLLVM(WindowsManifest|WindowsDriver|BOLT[A-Za-z0-9]*|TableGen[A-Za-z0-9]*|FileCheck|Fuzzer[A-Za-z0-9]*|XRay|InterfaceStub)\\.(a|lib)$")
+    set(${ARCHIVE_LIST} ${${ARCHIVE_LIST}} PARENT_SCOPE)
 endfunction()

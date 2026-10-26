@@ -15,6 +15,20 @@ if(NOT BESPOKE_SYSTEM_READERWRITERQUEUE)
   message(STATUS "Using bundled readerwriterqueue")
 endif()
 add_subdirectory(scalable-font2 EXCLUDE_FROM_ALL)
+if(NOT BESPOKE_SYSTEM_ZSTD)
+  message(STATUS "Using bundled zstd")
+  # Build only the static libzstd from upstream's own CMake (no shared lib,
+  # no CLI, tests, or contrib). Target name is libzstd_static.
+  set(ZSTD_BUILD_SHARED OFF  CACHE BOOL "" FORCE)
+  set(ZSTD_BUILD_STATIC ON   CACHE BOOL "" FORCE)
+  set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
+  set(ZSTD_BUILD_TESTS   OFF CACHE BOOL "" FORCE)
+  set(ZSTD_BUILD_CONTRIB OFF CACHE BOOL "" FORCE)
+  add_subdirectory(zstd/build/cmake EXCLUDE_FROM_ALL)
+else()
+  message(STATUS "Using system installed zstd")
+  find_package(zstd REQUIRED)
+endif()
 
 set(PYBIND11_NOPYTHON TRUE)
 if(NOT BESPOKE_SYSTEM_PYBIND11)
@@ -58,6 +72,22 @@ if (NOT BESPOKE_USE_SYSTEM_FAUST)
     # Download and extract LLVM, then feed its layout to the Faust build.
     include(${CMAKE_SOURCE_DIR}/Source/cmake/obtain-llvm.cmake)
     bespoke_download_llvm()
+    if(NOT WIN32 AND NOT BESPOKE_SYSTEM_ZSTD)
+        # LLVM's libLLVMSupport.a (Compression.cpp) references the ZSTD_* API.
+        # Faust's staticlib links ${LLVM_LIBS} and CMake propagates that PRIVATE
+        # link (with the --start-group) to BespokeSynth. GNU ld scans static
+        # archives left-to-right, so the bundled zstd archive must sit *inside*
+        # the --start-group (right before --end-group): the group is rescanned
+        # until no new symbols appear, resolving Compression.cpp's ZSTD_*
+        # references regardless of CMake's ordering of the link line.
+        get_target_property(_zstd_dir libzstd_static BINARY_DIR)
+        get_target_property(_zstd_out libzstd_static OUTPUT_NAME)
+        set(_zstd_archive "${_zstd_dir}/lib${_zstd_out}.a")
+        list(FIND LLVM_LIBS "-Wl,--end-group" _grp_idx)
+        if(_grp_idx GREATER -1)
+            list(INSERT LLVM_LIBS ${_grp_idx} "${_zstd_archive}")
+        endif()
+    endif()
     include(${CMAKE_SOURCE_DIR}/Source/cmake/llvm-backends.cmake)
     set(INCLUDE_LLVM      ON  CACHE BOOL   "" FORCE)
     set(LINK_LLVM_STATIC  ON  CACHE BOOL   "" FORCE)

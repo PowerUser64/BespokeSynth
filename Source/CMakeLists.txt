@@ -852,10 +852,15 @@ else()
         target_link_directories(BespokeSynth PRIVATE "${LLVM_LIB_DIR}")
         target_link_libraries(BespokeSynth PRIVATE staticlib ${LLVM_LIBS})
         if(NOT WIN32)
-            # LLVM's static archives reference these system libraries on Unix.
-            # (z/curses/tinfo were already needed by the interpreter build; zstd
-            # and xml2 are the new ones required by LLVM's static archives.)
-            target_link_libraries(BespokeSynth PRIVATE z zstd xml2 pthread dl m)
+            if(BESPOKE_SYSTEM_ZSTD)
+                # System zstd: link the imported target directly.
+                target_link_libraries(BespokeSynth PRIVATE zstd::libzstd_static)
+            endif()
+            # The bundled zstd archive is linked *inside* the LLVM --start-group
+            # from libs/CMakeLists.txt (see the bundled-zstd block there), so it
+            # is scanned within the group and resolves libLLVMSupport.a
+            # (Compression.cpp)'s ZSTD_* references regardless of CMake ordering.
+            target_link_libraries(BespokeSynth PRIVATE z pthread dl m)
         endif()
     else()
         message(FATAL_ERROR "BESPOKE_FAUST_BACKEND must be 'interpreter' or 'llvm_download', got '${BESPOKE_FAUST_BACKEND}'")
