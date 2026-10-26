@@ -839,19 +839,23 @@ if(BESPOKE_USE_SYSTEM_FAUST)
 else()
     if(BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
         target_link_libraries(BespokeSynth PRIVATE staticlib z curses tinfo)
-    elseif(BESPOKE_FAUST_BACKEND STREQUAL "llvm_download")
+    elseif(BESPOKE_FAUST_BACKEND STREQUAL "llvm" OR
+           BESPOKE_FAUST_BACKEND STREQUAL "llvm_system" OR
+           BESPOKE_FAUST_BACKEND STREQUAL "llvm_download")
         # The bundled Faust is built with its LLVM backend; switch BespokeSynth
-        # to the LLVM DSP API and link the downloaded LLVM.
+        # to the LLVM DSP API and link the LLVM obtained by libs/CMakeLists.txt
+        # (a system install, or a downloaded LLVM).
         # Use =1 here: a literal "true" would expand to the identifier true,
         # which the C preprocessor treats as 0 in #if, disabling the LLVM path.
         target_compile_definitions(BespokeSynth PRIVATE BESPOKE_FAUST_USE_LLVM=1)
         # LLVM headers for the Faust llvm-dsp wrapper / generated DSP code.
         target_include_directories(BespokeSynth PRIVATE "${LLVM_INCLUDE_DIRS}")
-        # Link the downloaded LLVM static archives (absolute paths on both
-        # Unix and MSVC; see Source/cmake/obtain-llvm.cmake).
+        # Link the LLVM libraries (absolute static archive paths when
+        # downloaded, -l flags from llvm-config when using a system install;
+        # see Source/cmake/obtain-llvm.cmake).
         target_link_directories(BespokeSynth PRIVATE "${LLVM_LIB_DIR}")
         target_link_libraries(BespokeSynth PRIVATE staticlib ${LLVM_LIBS})
-        if(NOT WIN32)
+        if(NOT WIN32 AND BESPOKE_LLVM_DOWNLOADED)
             if(BESPOKE_SYSTEM_ZSTD)
                 # System zstd: link the imported target directly.
                 target_link_libraries(BespokeSynth PRIVATE zstd::libzstd_static)
@@ -863,7 +867,7 @@ else()
             target_link_libraries(BespokeSynth PRIVATE z pthread dl m)
         endif()
     else()
-        message(FATAL_ERROR "BESPOKE_FAUST_BACKEND must be 'interpreter' or 'llvm_download', got '${BESPOKE_FAUST_BACKEND}'")
+        message(FATAL_ERROR "BESPOKE_FAUST_BACKEND must be 'interpreter', 'llvm', 'llvm_system', or 'llvm_download', got '${BESPOKE_FAUST_BACKEND}'")
     endif()
     target_include_directories(BespokeSynth PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../libs/faust/architecture")
 endif()

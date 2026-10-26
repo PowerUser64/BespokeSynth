@@ -123,3 +123,150 @@ function(bespoke_filter_tool_archives ARCHIVE_LIST)
     list(FILTER ${ARCHIVE_LIST} EXCLUDE REGEX "libLLVM(WindowsManifest|WindowsDriver|BOLT[A-Za-z0-9]*|TableGen[A-Za-z0-9]*|FileCheck|Fuzzer[A-Za-z0-9]*|XRay|InterfaceStub)\\.(a|lib)$")
     set(${ARCHIVE_LIST} ${${ARCHIVE_LIST}} PARENT_SCOPE)
 endfunction()
+
+# Detect a usable system LLVM.  If one is found, expose its layout the same way
+# bespoke_download_llvm() does (LLVM_DIR / LLVM_INCLUDE_DIRS / LLVM_LIB_DIR /
+# LLVM_PACKAGE_VERSION / LLVM_DEFINITIONS / LLVM_LD_FLAGS / LLVM_LIBS), so the
+# bundled Faust build and BespokeSynth consume it identically.
+#
+# Detection mirrors the original llvm_system / llvm behavior: first a CONFIG
+# find_package for the same LLVM major.minor the downloader ships (LLVM's
+# version file requires an exact major.minor match), then a llvm-config
+# fallback.  Deriving the static link line requires llvm-config, so a system
+# install without llvm-config is treated as not found.
+function(bespoke_find_system_llvm)
+    # The bundled Faust supports LLVM up to version 22; accept a system LLVM of
+    # the same major.minor the downloader provides.
+    string(REGEX REPLACE "([0-9]+)\\.([0-9]+).*" "\\1.\\2" _llvm_version "${BESPOKE_LLVM_VERSION}")
+
+    # Clear any cached LLVM_DIR from previous find_package calls.
+    unset(LLVM_DIR CACHE)
+
+    set(_system_found OFF)
+
+    # 1. Standard CONFIG search.
+    find_package(LLVM ${_llvm_version} CONFIG QUIET)
+    if(LLVM_FOUND)
+        set(_system_found ON)
+    else()
+        # 2. llvm-config fallback: point find_package at its cmake dir.
+        find_program(_llvm_config NAME llvm-config)
+        if(_llvm_config)
+            execute_process(COMMAND "${_llvm_config}" --cmakedir
+                            OUTPUT_VARIABLE _llvm_cmake_dir
+                            OUTPUT_STRIP_TRAILING_WHITESPACE
+                            RESULT_VARIABLE _cmake_result)
+            if(_cmake_result EQUAL 0 AND EXISTS "${_llvm_cmake_dir}/LLVMConfig.cmake")
+                find_package(LLVM ${_llvm_version} CONFIG HINTS "${_llvm_cmake_dir}" NO_DEFAULT_PATH QUIET)
+                if(LLVM_FOUND)
+                    set(_system_found ON)
+                endif()
+            endif()
+        endif()
+    endif()
+
+    if(_system_found)
+        # Derive the layout and static link line from llvm-config.  Prefer the
+        # install's own llvm-config (LLVMConfig sets LLVM_TOOLS_BINARY_DIR),
+        # falling back to one on PATH.
+        find_program(_llvm_config NAMES llvm-config HINTS "${LLVM_TOOLS_BINARY_DIR}" NO_DEFAULT_PATH)
+        if(NOT _llvm_config)
+            find_program(_llvm_config NAMES llvm-config)
+        endif()
+        if(_llvm_config)
+            execute_process(COMMAND "${_llvm_config}" --includedir
+                            OUTPUT_VARIABLE _llvm_include
+                            OUTPUT_STRIP_TRAILING_WHITESPACE
+                            RESULT_VARIABLE _inc_result)
+            execute_process(COMMAND "${_llvm_config}" --libdir
+                            OUTPUT_VARIABLE _llvm_lib
+                            OUTPUT_STRIP_TRAILING_WHITESPACE
+                            RESULT_VARIABLE _lib_result)
+            execute_process(COMMAND "${_llvm_config}" --version
+                            OUTPUT_VARIABLE _llvm_version_out
+                            OUTPUT_STRIP_TRAILING_WHITESPACE
+                            RESULT_VARIABLE _ver_result)
+            execute_process(COMMAND "${_llvm_config}" --ldflags
+                            OUTPUT_VARIABLE _llvm_ldflags
+                            OUTPUT_STRIP_TRAILING_WHITESPACE
+                            RESULT_VARIABLE _ld_result)
+            execute_process(COMMAND "${_llvm_config}" --link-static --libs all
+                            OUTPUT_VARIABLE _llvm_libs
+                            OUTPUT_STRIP_TRAILING_WHITESPACE
+                            RESULT_VARIABLE _libs_result)
+            execute_process(COMMAND "${_llvm_config}" --system-libs
+                            OUTPUT_VARIABLE _llvm_syslibs
+                            OUTPUT_STRIP_TRAILING_WHITESPACE
+                            RESULT_VARIABLE _sys_result)
+            if(_inc_result EQUAL 0 AND _lib_result EQUAL 0 AND _ver_result EQUAL 0
+               AND _libs_result EQUAL 0 AND _sys_result EQUAL 0
+               AND NOT _llvm_include STREQUAL "" AND NOT _llvm_lib STREQUAL ""
+               AND NOT _llvm_version_out STREQUAL "")
+                string(REPLACE " " ";" _llvm_libs "${_llvm_libs} ${_llvm_syslibs}")
+                if(DEFINED LLVM_DEFINITIONS AND NOT LLVM_DEFINITIONS STREQUAL "")
+                    set(_llvm_defs "${LLVM_DEFINITIONS}")
+                else()
+                    set(_llvm_defs "-D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS")
+                endif()
+                if(_llvm_ldflags STREQUAL "")
+                    set(_llvm_ldflags "-L${_llvm_lib}")
+                endif()
+                set(BESPOKE_SYSTEM_LLVM_FOUND ON PARENT_SCOPE)
+                set(LLVM_DIR "${LLVM_DIR}" PARENT_SCOPE)
+                set(LLVM_INCLUDE_DIRS "${_llvm_include}" PARENT_SCOPE)
+                set(LLVM_LIB_DIR "${_llvm_lib}" PARENT_SCOPE)
+                set(LLVM_PACKAGE_VERSION "${_llvm_version_out}" PARENT_SCOPE)
+                set(LLVM_DEFINITIONS "${_llvm_defs}" PARENT_SCOPE)
+                set(LLVM_LD_FLAGS "${_llvm_ldflags}" PARENT_SCOPE)
+                set(LLVM_LIBS "${_llvm_libs}" PARENT_SCOPE)
+            endif()
+        endif()
+    endif()
+endfunction()
+
+# Acquire LLVM for the bundled Faust build.  MODE is one of:
+#   'never'   use a system LLVM only (BESPOKE_FAUST_BACKEND=llvm_system)
+#   'detect'  use a system LLVM, else download (BESPOKE_FAUST_BACKEND=llvm)
+#   'always'  download only (BESPOKE_FAUST_BACKEND=llvm_download)
+# Sets BESPOKE_LLVM_DOWNLOADED (ON/OFF) and the LLVM_* layout variables.
+function(bespoke_obtain_llvm MODE)
+    if(NOT MODE STREQUAL "detect" AND NOT MODE STREQUAL "always" AND NOT MODE STREQUAL "never")
+        message(FATAL_ERROR "BESPOKE_FAUST_BACKEND mode must be 'detect', 'always', or 'never', got '${MODE}'")
+    endif()
+
+    if(NOT MODE STREQUAL "always")
+        bespoke_find_system_llvm()
+        if(BESPOKE_SYSTEM_LLVM_FOUND)
+            message(STATUS "BESPOKE_OBTAIN_LLVM: Found system LLVM ${LLVM_PACKAGE_VERSION} at ${LLVM_DIR}.")
+            set(BESPOKE_LLVM_DOWNLOADED OFF CACHE BOOL "" FORCE)
+            # Cache the layout so sibling directory scopes (e.g. Source) can see it.
+            set(LLVM_DIR "${LLVM_DIR}" CACHE PATH "" FORCE)
+            set(LLVM_INCLUDE_DIRS "${LLVM_INCLUDE_DIRS}" CACHE PATH "" FORCE)
+            set(LLVM_LIB_DIR "${LLVM_LIB_DIR}" CACHE PATH "" FORCE)
+            # The remaining variables flow libs -> faust -> staticlib ->
+            # BespokeSynth, so leave them as plain (non-cache) variables.
+            set(LLVM_PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}" PARENT_SCOPE)
+            set(LLVM_DEFINITIONS "${LLVM_DEFINITIONS}" PARENT_SCOPE)
+            set(LLVM_LD_FLAGS "${LLVM_LD_FLAGS}" PARENT_SCOPE)
+            set(LLVM_LIBS "${LLVM_LIBS}" PARENT_SCOPE)
+            return()
+        endif()
+    endif()
+
+    if(MODE STREQUAL "never")
+        message(FATAL_ERROR
+            "BESPOKE_OBTAIN_LLVM: mode='never' (llvm_system), system LLVM not found.\n"
+            "Install LLVM development packages (e.g. libllvm-dev) or use a different BESPOKE_FAUST_BACKEND.")
+    endif()
+
+    # Download (llvm_download, or llvm when no system LLVM was found).
+    bespoke_download_llvm()
+    set(BESPOKE_LLVM_DOWNLOADED ON CACHE BOOL "" FORCE)
+    set(LLVM_DIR "${LLVM_DIR}" CACHE PATH "" FORCE)
+    set(LLVM_INCLUDE_DIRS "${LLVM_INCLUDE_DIRS}" CACHE PATH "" FORCE)
+    set(LLVM_LIB_DIR "${LLVM_LIB_DIR}" CACHE PATH "" FORCE)
+    set(LLVM_PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}" PARENT_SCOPE)
+    set(LLVM_DEFINITIONS "${LLVM_DEFINITIONS}" PARENT_SCOPE)
+    set(LLVM_LD_FLAGS "${LLVM_LD_FLAGS}" PARENT_SCOPE)
+    set(LLVM_LIBS "${LLVM_LIBS}" PARENT_SCOPE)
+endfunction()

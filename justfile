@@ -132,7 +132,7 @@ faustc:
 test-all-faust-backends:
    #!/usr/bin/env sh
    mkdir -p ignore
-   for backend in interpreter llvm_download; do
+   for backend in interpreter llvm_download llvm; do
       just clean configure -DBESPOKE_FAUST_BACKEND=$backend &&
          just build &&
          test -f "$(just _print_binary_name)"

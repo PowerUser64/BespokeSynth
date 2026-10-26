@@ -67,12 +67,24 @@ if (NOT BESPOKE_USE_SYSTEM_FAUST)
     include(${CMAKE_CURRENT_SOURCE_DIR}/faust/build/backends/interp.cmake)
     set(INCLUDE_LLVM      OFF CACHE BOOL   "" FORCE)
     set(LLVM_INCLUDE_DIRS ""  CACHE STRING "" FORCE)
-  elseif(BESPOKE_FAUST_BACKEND STREQUAL "llvm_download")
-    message(STATUS "Faust LLVM backend enabled (downloaded LLVM)")
-    # Download and extract LLVM, then feed its layout to the Faust build.
+  elseif(BESPOKE_FAUST_BACKEND STREQUAL "llvm" OR
+         BESPOKE_FAUST_BACKEND STREQUAL "llvm_system" OR
+         BESPOKE_FAUST_BACKEND STREQUAL "llvm_download")
+    message(STATUS "Faust LLVM backend enabled (${BESPOKE_FAUST_BACKEND})")
+    # Acquire LLVM: a system install only (llvm_system), a system install with
+    # a download fallback (llvm), or a download only (llvm_download), then feed
+    # its layout to the Faust build below.
+    if(BESPOKE_FAUST_BACKEND STREQUAL "llvm_system")
+      set(_llvm_mode "never")
+    elseif(BESPOKE_FAUST_BACKEND STREQUAL "llvm")
+      set(_llvm_mode "detect")
+    else()
+      set(_llvm_mode "always")
+    endif()
     include(${CMAKE_SOURCE_DIR}/Source/cmake/obtain-llvm.cmake)
-    bespoke_download_llvm()
-    if(NOT WIN32 AND NOT BESPOKE_SYSTEM_ZSTD)
+    bespoke_obtain_llvm("${_llvm_mode}")
+    if(BESPOKE_LLVM_DOWNLOADED)
+      if(NOT WIN32 AND NOT BESPOKE_SYSTEM_ZSTD)
         # LLVM's libLLVMSupport.a (Compression.cpp) references the ZSTD_* API.
         # Faust's staticlib links ${LLVM_LIBS} and CMake propagates that PRIVATE
         # link (with the --start-group) to BespokeSynth. GNU ld scans static
@@ -87,18 +99,23 @@ if (NOT BESPOKE_USE_SYSTEM_FAUST)
         if(_grp_idx GREATER -1)
             list(INSERT LLVM_LIBS ${_grp_idx} "${_zstd_archive}")
         endif()
+      endif()
     endif()
     include(${CMAKE_SOURCE_DIR}/Source/cmake/llvm-backends.cmake)
     set(INCLUDE_LLVM      ON  CACHE BOOL   "" FORCE)
     set(LINK_LLVM_STATIC  ON  CACHE BOOL   "" FORCE)
-    # Don't let Faust's post-build combine the LLVM .a files into libfaust.a;
-    # we link the LLVM archives directly from BespokeSynth instead.
+    # Don't let Faust's post-build combine the LLVM archives into libfaust.a;
+    # we link the LLVM libraries directly from BespokeSynth instead.
     set(INCLUDE_LLVM_STATIC_IN_ARCHIVE OFF CACHE BOOL "" FORCE)
-    message(STATUS "Using downloaded LLVM ${LLVM_PACKAGE_VERSION} at ${LLVM_DIR}")
+    if(BESPOKE_LLVM_DOWNLOADED)
+      message(STATUS "Using downloaded LLVM ${LLVM_PACKAGE_VERSION} at ${LLVM_DIR}")
+    else()
+      message(STATUS "Using system LLVM ${LLVM_PACKAGE_VERSION} at ${LLVM_DIR}")
+    endif()
     message(STATUS "LLVM include dirs: ${LLVM_INCLUDE_DIRS}")
     message(STATUS "LLVM lib dir: ${LLVM_LIB_DIR}")
   else()
-    message(FATAL_ERROR "BESPOKE_FAUST_BACKEND must be 'interpreter' or 'llvm_download', got '${BESPOKE_FAUST_BACKEND}'")
+    message(FATAL_ERROR "BESPOKE_FAUST_BACKEND must be 'interpreter', 'llvm', 'llvm_system', or 'llvm_download', got '${BESPOKE_FAUST_BACKEND}'")
   endif()
 
   add_subdirectory(
