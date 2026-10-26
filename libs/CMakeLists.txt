@@ -103,7 +103,13 @@ if (NOT BESPOKE_USE_SYSTEM_FAUST)
     endif()
     include(${CMAKE_SOURCE_DIR}/Source/cmake/llvm-backends.cmake)
     set(INCLUDE_LLVM      ON  CACHE BOOL   "" FORCE)
-    set(LINK_LLVM_STATIC  ON  CACHE BOOL   "" FORCE)
+    # Downloaded LLVM is linked as static archives; a system install may be
+    # static or shared (llvm-config picks whichever it ships).
+    if(BESPOKE_LLVM_LINK_SHARED STREQUAL "shared")
+      set(LINK_LLVM_STATIC OFF CACHE BOOL "" FORCE)
+    else()
+      set(LINK_LLVM_STATIC ON  CACHE BOOL "" FORCE)
+    endif()
     # Don't let Faust's post-build combine the LLVM archives into libfaust.a;
     # we link the LLVM libraries directly from BespokeSynth instead.
     set(INCLUDE_LLVM_STATIC_IN_ARCHIVE OFF CACHE BOOL "" FORCE)

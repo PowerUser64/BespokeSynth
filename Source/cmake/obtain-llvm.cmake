@@ -2,12 +2,13 @@
 # releases into ${BESPOKE_LLVM_INSTALL_DIR}, then sets the LLVM_* variables
 # consumed by the bundled Faust build and BespokeSynth.
 #
-# The bundled Faust (libs/faust) only supports LLVM up to version 22, and the
-# GitHub releases ship prebuilt LLVM tarballs (LLVM-<version>-Linux-X64, etc.)
-# for the major platforms.  See AGENTS.md: libs/faust is not our code, so the
-# version must stay within what that bundled Faust supports.
+# The bundled Faust (libs/faust) supports LLVM 23.1 (the updated submodule is
+# the llvm-23.1.3-1 / 2.90.10 release), and the GitHub releases ship prebuilt
+# LLVM tarballs (LLVM-<version>-Linux-X64, etc.) for the major platforms.
+# See AGENTS.md: libs/faust is not our code, so the version must stay within
+# what that bundled Faust supports.
 
-set(BESPOKE_LLVM_VERSION "22.1.8" CACHE STRING
+set(BESPOKE_LLVM_VERSION "23.1.4" CACHE STRING
     "LLVM version to download when BESPOKE_FAUST_BACKEND is 'llvm_download'")
 set(BESPOKE_LLVM_INSTALL_DIR "${CMAKE_SOURCE_DIR}/ignore/llvm" CACHE PATH
     "Directory where the downloaded LLVM is extracted")
@@ -135,8 +136,8 @@ endfunction()
 # fallback.  Deriving the static link line requires llvm-config, so a system
 # install without llvm-config is treated as not found.
 function(bespoke_find_system_llvm)
-    # The bundled Faust supports LLVM up to version 22; accept a system LLVM of
-    # the same major.minor the downloader provides.
+    # The bundled Faust (updated submodule) supports LLVM 23.1; accept a system
+    # LLVM of the same major.minor the downloader provides.
     string(REGEX REPLACE "([0-9]+)\\.([0-9]+).*" "\\1.\\2" _llvm_version "${BESPOKE_LLVM_VERSION}")
 
     # Clear any cached LLVM_DIR from previous find_package calls.
@@ -190,14 +191,36 @@ function(bespoke_find_system_llvm)
                             OUTPUT_VARIABLE _llvm_ldflags
                             OUTPUT_STRIP_TRAILING_WHITESPACE
                             RESULT_VARIABLE _ld_result)
+            # Try a static link line first; if the install ships no static
+            # archives (e.g. distro shared-only packages), fall back to linking
+            # the shared LLVM library.
+            set(_link_mode "static")
             execute_process(COMMAND "${_llvm_config}" --link-static --libs all
                             OUTPUT_VARIABLE _llvm_libs
                             OUTPUT_STRIP_TRAILING_WHITESPACE
                             RESULT_VARIABLE _libs_result)
-            execute_process(COMMAND "${_llvm_config}" --system-libs
-                            OUTPUT_VARIABLE _llvm_syslibs
-                            OUTPUT_STRIP_TRAILING_WHITESPACE
-                            RESULT_VARIABLE _sys_result)
+            if(NOT _libs_result EQUAL 0)
+                execute_process(COMMAND "${_llvm_config}" --link-shared --libs all
+                                OUTPUT_VARIABLE _llvm_libs
+                                OUTPUT_STRIP_TRAILING_WHITESPACE
+                                RESULT_VARIABLE _libs_result)
+                if(_libs_result EQUAL 0)
+                    set(_link_mode "shared")
+                endif()
+            endif()
+            if(_libs_result EQUAL 0)
+                if(_link_mode STREQUAL "shared")
+                    execute_process(COMMAND "${_llvm_config}" --link-shared --system-libs
+                                    OUTPUT_VARIABLE _llvm_syslibs
+                                    OUTPUT_STRIP_TRAILING_WHITESPACE
+                                    RESULT_VARIABLE _sys_result)
+                else()
+                    execute_process(COMMAND "${_llvm_config}" --link-static --system-libs
+                                    OUTPUT_VARIABLE _llvm_syslibs
+                                    OUTPUT_STRIP_TRAILING_WHITESPACE
+                                    RESULT_VARIABLE _sys_result)
+                endif()
+            endif()
             if(_inc_result EQUAL 0 AND _lib_result EQUAL 0 AND _ver_result EQUAL 0
                AND _libs_result EQUAL 0 AND _sys_result EQUAL 0
                AND NOT _llvm_include STREQUAL "" AND NOT _llvm_lib STREQUAL ""
@@ -212,6 +235,7 @@ function(bespoke_find_system_llvm)
                     set(_llvm_ldflags "-L${_llvm_lib}")
                 endif()
                 set(BESPOKE_SYSTEM_LLVM_FOUND ON PARENT_SCOPE)
+                set(BESPOKE_LLVM_LINK_SHARED "${_link_mode}" PARENT_SCOPE)
                 set(LLVM_DIR "${LLVM_DIR}" PARENT_SCOPE)
                 set(LLVM_INCLUDE_DIRS "${_llvm_include}" PARENT_SCOPE)
                 set(LLVM_LIB_DIR "${_llvm_lib}" PARENT_SCOPE)
@@ -245,6 +269,7 @@ function(bespoke_obtain_llvm MODE)
             set(LLVM_LIB_DIR "${LLVM_LIB_DIR}" CACHE PATH "" FORCE)
             # The remaining variables flow libs -> faust -> staticlib ->
             # BespokeSynth, so leave them as plain (non-cache) variables.
+            set(BESPOKE_LLVM_LINK_SHARED "${BESPOKE_LLVM_LINK_SHARED}" PARENT_SCOPE)
             set(LLVM_PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}" PARENT_SCOPE)
             set(LLVM_DEFINITIONS "${LLVM_DEFINITIONS}" PARENT_SCOPE)
             set(LLVM_LD_FLAGS "${LLVM_LD_FLAGS}" PARENT_SCOPE)
