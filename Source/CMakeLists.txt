@@ -838,7 +838,12 @@ if(BESPOKE_USE_SYSTEM_FAUST)
     endif()
 else()
     if(BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
-        target_link_libraries(BespokeSynth PRIVATE staticlib z curses tinfo)
+        # The bundled Faust interpreter staticlib carries its own dependencies
+        # (via FAUST_LIBS), so no extra system libs are needed. The `z curses
+        # tinfo` that used to be here were added for the old LLVM build and
+        # leaked into this branch; they are unnecessary here (and `tinfo` is
+        # not shipped on macOS).
+        target_link_libraries(BespokeSynth PRIVATE staticlib)
     elseif(BESPOKE_FAUST_BACKEND STREQUAL "llvm" OR
            BESPOKE_FAUST_BACKEND STREQUAL "llvm_system" OR
            BESPOKE_FAUST_BACKEND STREQUAL "llvm_download")
