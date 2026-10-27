@@ -29,10 +29,10 @@ jobs:
       matrix:
         os:
           - ubuntu-22.04
-          # - macos-14
+          - macos-14
           - windows-latest
         backend:
-          # - interpreter
+          - interpreter
           - llvm_download
 
     steps:
@@ -90,26 +90,26 @@ jobs:
         run: |
           cmake --build build --config Release --target BespokeSynth --parallel 4
 
-  # format:
-  #   name: Code formatting
-  #   runs-on: ubuntu-22.04
-  #   timeout-minutes: 20
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #
-  #     - name: Install clang-format
-  #       run: |
-  #         sudo apt-get update
-  #         curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key \
-  #           | sudo gpg --dearmor -o /usr/share/keyrings/llvm-snapshot.gpg.key
-  #         echo "deb [signed-by=/usr/share/keyrings/llvm-snapshot.gpg.key] http://apt.llvm.org/jammy/ llvm-toolchain-jammy-23 main" \
-  #           | sudo tee /etc/apt/sources.list.d/llvm-toolchain-jammy.list
-  #         sudo apt-get update
-  #         sudo apt-get install -y clang-format-23
-  #         sudo mv /usr/bin/clang-format-23 /usr/bin/clang-format
-  #
-  #     - name: Check formatting
-  #       run: |
-  #         clang-format --version
-  #         git ls-files -- ':(glob)Source/**/*.cpp' ':(glob)Source/**/*.h' \
-  #           | xargs clang-format --dry-run --Werror
+  format:
+    name: Code formatting
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo gpg --dearmor -o /usr/share/keyrings/llvm-snapshot.gpg.key
+          echo "deb [signed-by=/usr/share/keyrings/llvm-snapshot.gpg.key] http://apt.llvm.org/jammy/ llvm-toolchain-jammy-23 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-toolchain-jammy.list
+          sudo apt-get update
+          sudo apt-get install -y clang-format-23
+          sudo mv /usr/bin/clang-format-23 /usr/bin/clang-format
+
+      - name: Check formatting
+        run: |
+          clang-format --version
+          git ls-files -- ':(glob)Source/**/*.cpp' ':(glob)Source/**/*.h' \
+            | xargs clang-format --dry-run --Werror
