@@ -31,9 +31,9 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
 endif ()
 
-project(BespokeSynth VERSION 1.3.0 LANGUAGES C CXX ASM)
-
-# Faust options
+# Faust options. This must be set before project(): the MSVC generator reads
+# CMAKE_MSVC_RUNTIME_LIBRARY at project() time to decide the runtime, so the
+# /MD override below has to be in place before the project() call.
 option(BESPOKE_SYSTEM_FAUST "Use system installation of libfaust" OFF)
 set(BESPOKE_FAUST_BACKEND "interpreter" CACHE STRING "Faust backend:
     'interpreter'    no LLVM (default)
@@ -56,10 +56,14 @@ endif()
 # static .lib archives compiled with the dynamic MSVC runtime (/MD), so
 # BespokeSynth must use the same runtime when linking them, or the linker
 # fails with LNK2038 runtime-library mismatches. The interpreter backend has
-# no LLVM and keeps the default static runtime.
-if(WIN32 AND NOT BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
+# no LLVM and keeps the default static runtime. WIN32 isn't defined until
+# project(), but CMAKE_MSVC_RUNTIME_LIBRARY is only honored by the MSVC
+# generator, so gating on the backend alone is safe on Unix.
+if(NOT BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL$<$<CONFIG:Debug>:Debug>")
 endif()
+
+project(BespokeSynth VERSION 1.3.0 LANGUAGES C CXX ASM)
 
 message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 math(EXPR BESPOKE_BITNESS "${CMAKE_SIZEOF_VOID_P} * 8" OUTPUT_FORMAT DECIMAL)
@@ -72,8 +76,6 @@ add_compile_options(
     # Set source and executable charsets to UTF-8. Required for building on CJK Windows.
     $<$<CXX_COMPILER_ID:MSVC>:/utf-8>
     )
-
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 if(WIN32 AND ${BESPOKE_BITNESS} EQUAL 32)
     add_link_options(

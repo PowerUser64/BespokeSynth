@@ -860,6 +860,13 @@ else()
         # see Source/cmake/obtain-llvm.cmake).
         target_link_directories(BespokeSynth PRIVATE "${LLVM_LIB_DIR}")
         target_link_libraries(BespokeSynth PRIVATE staticlib ${LLVM_LIBS})
+        if(WIN32)
+            # LLVM's static archives (from the faust-llvm windows packages)
+            # reference POSIX names like read/close/write. The UCRT exports
+            # them with a leading underscore (_read/_close/_write); oldnames.lib
+            # provides the underscore-less aliases the LLVM objects expect.
+            target_link_libraries(BespokeSynth PRIVATE oldnames)
+        endif()
         if(NOT WIN32 AND BESPOKE_LLVM_DOWNLOADED)
             # LLVM's static archives reference these system libraries on Unix
             # (the faust-compiled LLVM bundles its other deps, so no separate
