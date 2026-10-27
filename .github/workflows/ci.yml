@@ -2,8 +2,8 @@
 #
 # Plain build check: verify that BespokeSynth compiles on Linux, macOS, and
 # Windows, with both Faust backends (the default interpreter and the
-# llvm_download LLVM backend). Runs on every push to any branch and on every
-# pull request.
+# llvm_download LLVM backend), plus a clang-format check on the Source tree.
+# Runs on every push to any branch and on every pull request.
 #
 # This is intentionally minimal and uses standard GitHub Actions practices:
 # configure with CMake and build the BespokeSynth target. No packaging,
@@ -89,3 +89,22 @@ jobs:
       - name: Build BespokeSynth
         run: |
           cmake --build build --config Release --target BespokeSynth --parallel 4
+
+  format:
+    name: Code formatting
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format-22
+          sudo mv /usr/bin/clang-format-22 /usr/bin/clang-format
+
+      - name: Check formatting
+        run: |
+          clang-format --version
+          git ls-files -- ':(glob)Source/**/*.cpp' ':(glob)Source/**/*.h' \
+            | xargs clang-format --dry-run --Werror
