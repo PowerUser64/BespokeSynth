@@ -27,7 +27,9 @@
 #include "Slider.h"
 #include "SynthGlobals.h"
 #include "TextEntry.h"
+#ifndef _WIN32
 #include <sys/poll.h>
+#endif
 
 /** TODO:
  * - slider quantization (int)
