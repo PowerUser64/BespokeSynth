@@ -1,7 +1,9 @@
 # BespokeSynth CI
 #
 # Plain build check: verify that BespokeSynth compiles on Linux, macOS, and
-# Windows. Runs on every push to any branch and on every pull request.
+# Windows, with both Faust backends (the default interpreter and the
+# llvm_download LLVM backend). Runs on every push to any branch and on every
+# pull request.
 #
 # This is intentionally minimal and uses standard GitHub Actions practices:
 # configure with CMake and build the BespokeSynth target. No packaging,
@@ -19,7 +21,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build (${{ matrix.os }})
+    name: Build (${{ matrix.os }}, ${{ matrix.backend }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
@@ -29,6 +31,9 @@ jobs:
           - ubuntu-22.04
           - macos-14
           - windows-latest
+        backend:
+          - interpreter
+          - llvm_download
 
     steps:
       - uses: actions/checkout@v4
@@ -72,13 +77,14 @@ jobs:
             patchelf
 
       - name: Configure CMake
+        shell: bash
         run: |
           case "${{ matrix.os }}" in
             ubuntu-*)   CMAKE_ARGS="-GNinja" ;;
             macos-*)    CMAKE_ARGS="" ;;
             windows-*)  CMAKE_ARGS="-A x64" ;;
           esac
-          cmake -B build -DCMAKE_BUILD_TYPE=Release $CMAKE_ARGS
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DBESPOKE_FAUST_BACKEND=${{ matrix.backend }} $CMAKE_ARGS
 
       - name: Build BespokeSynth
         run: |
