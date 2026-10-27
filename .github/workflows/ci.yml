@@ -30,8 +30,7 @@ jobs:
         os:
           - ubuntu-26.04
           - ubuntu-26.04-arm
-          - macos-latest
-          - macos-26-intel
+          - macos-14
           - windows-latest
         backend:
           - interpreter
