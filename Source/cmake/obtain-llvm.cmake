@@ -1,48 +1,55 @@
-# Downloads and extracts a prebuilt LLVM from the llvm-project GitHub
-# releases into ${BESPOKE_LLVM_INSTALL_DIR}, then sets the LLVM_* variables
-# consumed by the bundled Faust build and BespokeSynth.
+# Downloads and extracts a prebuilt LLVM from the Faust GitHub releases into
+# ${BESPOKE_LLVM_INSTALL_DIR}, then sets the LLVM_* variables consumed by the
+# bundled Faust build and BespokeSynth.
 #
 # The bundled Faust (libs/faust) supports LLVM 23.1 (the updated submodule is
-# the llvm-23.1.3-1 / 2.90.10 release), and the GitHub releases ship prebuilt
-# LLVM tarballs (LLVM-<version>-Linux-X64, etc.) for the major platforms.
+# the llvm-23.1.3-1 / 2.90.10 release), and the Faust releases ship prebuilt
+# LLVM packages (faust-llvm-<version>-<platform>) that bundle all of LLVM's
+# dependencies. Each package extracts to a top-level "llvm/" directory
+# (bin/, include/, lib/); Windows ships a .zip, the others a .tar.xz.
 # See AGENTS.md: libs/faust is not our code, so the version must stay within
 # what that bundled Faust supports.
 
-set(BESPOKE_LLVM_VERSION "23.1.4" CACHE STRING
+set(BESPOKE_LLVM_VERSION "23.1.3-1" CACHE STRING
     "LLVM version to download when BESPOKE_FAUST_BACKEND is 'llvm_download'")
 set(BESPOKE_LLVM_INSTALL_DIR "${CMAKE_SOURCE_DIR}/ignore/llvm" CACHE PATH
     "Directory where the downloaded LLVM is extracted")
 
 function(bespoke_download_llvm)
-    # Pick the platform-specific prebuilt package.  The LLVM-only prebuilt
-    # tarballs are named LLVM-<version>-<platform>.tar.xz on the GitHub
-    # releases page; on Windows the package is clang+llvm-<version>-
-    # <arch>-pc-windows-msvc.tar.xz (there is no LLVM-only tarball for
-    # Windows, only .exe/.msi installers).
+    # Pick the platform-specific prebuilt package.  The faust-compiled LLVM
+    # packages are named faust-llvm-<version>-<platform>.tar.xz, except on
+    # Windows where the package is faust-llvm-<version>-windows-x64.zip.
     if(APPLE)
         if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|aarch64|arm64)")
-            set(_llvm_pkg "LLVM-${BESPOKE_LLVM_VERSION}-macOS-ARM64.tar.xz")
+            set(_llvm_pkg "faust-llvm-${BESPOKE_LLVM_VERSION}-macos-arm64.tar.xz")
         else()
-            set(_llvm_pkg "LLVM-${BESPOKE_LLVM_VERSION}-macOS-X64.tar.xz")
+            set(_llvm_pkg "faust-llvm-${BESPOKE_LLVM_VERSION}-macos-x64.tar.xz")
         endif()
     elseif(WIN32)
         if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|aarch64|arm64)")
-            set(_llvm_pkg "clang+llvm-${BESPOKE_LLVM_VERSION}-aarch64-pc-windows-msvc.tar.xz")
+            message(FATAL_ERROR "Windows on ARM is unsupported by the faust LLVM backend.")
         else()
-            set(_llvm_pkg "clang+llvm-${BESPOKE_LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz")
+            set(_llvm_pkg "faust-llvm-${BESPOKE_LLVM_VERSION}-windows-x64.zip")
         endif()
     elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|aarch64|arm64)")
-        set(_llvm_pkg "LLVM-${BESPOKE_LLVM_VERSION}-Linux-ARM64.tar.xz")
+        set(_llvm_pkg "faust-llvm-${BESPOKE_LLVM_VERSION}-linux-aarch64.tar.xz")
     else()
-        set(_llvm_pkg "LLVM-${BESPOKE_LLVM_VERSION}-Linux-X64.tar.xz")
+        set(_llvm_pkg "faust-llvm-${BESPOKE_LLVM_VERSION}-linux-x86_64.tar.xz")
     endif()
 
     set(_llvm_url
-        "https://github.com/llvm/llvm-project/releases/download/llvmorg-${BESPOKE_LLVM_VERSION}/${_llvm_pkg}")
+        "https://github.com/grame-cncm/faust/releases/download/llvm-${BESPOKE_LLVM_VERSION}/${_llvm_pkg}")
     set(_llvm_tarball "${BESPOKE_LLVM_INSTALL_DIR}/${_llvm_pkg}")
-    # The tarball extracts to a directory named after the package (minus .tar.xz).
-    string(REGEX REPLACE "\\.tar\\.xz$" "" _llvm_extract "${_llvm_pkg}")
+    # The package extracts to a top-level "llvm/" directory containing bin/,
+    # include/, and lib/ (the faust-compiled LLVM layout).
+    set(_llvm_extract "llvm")
     set(_llvm_dir "${BESPOKE_LLVM_INSTALL_DIR}/${_llvm_extract}")
+    # Windows ships a .zip; the others ship .tar.xz.
+    if(_llvm_pkg MATCHES "\\.zip$")
+        set(_llvm_extract_is_zip ON)
+    else()
+        set(_llvm_extract_is_zip OFF)
+    endif()
 
     # Download and extract only if the extracted LLVM isn't already present.
     if(NOT EXISTS "${_llvm_dir}/include/llvm" OR NOT EXISTS "${_llvm_dir}/lib")
@@ -60,15 +67,29 @@ function(bespoke_download_llvm)
         endif()
 
         message(STATUS "Extracting LLVM ${BESPOKE_LLVM_VERSION} to ${_llvm_dir}")
-        # Use the system tar when available; cmake -E tar handles .tar.xz too.
-        find_program(_tar_cmd tar)
-        if(_tar_cmd)
-            execute_process(COMMAND "${_tar_cmd}" -xf "${_llvm_tarball}" -C "${BESPOKE_LLVM_INSTALL_DIR}"
-                            RESULT_VARIABLE _extract_result)
+        if(_llvm_extract_is_zip)
+            # Windows ships a .zip. GNU tar cannot read zip archives, so use
+            # unzip when available; CMake's own tar reads zip too.
+            find_program(_unzip_cmd unzip)
+            if(_unzip_cmd)
+                execute_process(COMMAND "${_unzip_cmd}" -q "${_llvm_tarball}" -d "${BESPOKE_LLVM_INSTALL_DIR}"
+                                RESULT_VARIABLE _extract_result)
+            else()
+                execute_process(COMMAND "${CMAKE_COMMAND}" -E tar xf "${_llvm_tarball}"
+                                WORKING_DIRECTORY "${BESPOKE_LLVM_INSTALL_DIR}"
+                                RESULT_VARIABLE _extract_result)
+            endif()
         else()
-            execute_process(COMMAND "${CMAKE_COMMAND}" -E tar xJf "${_llvm_tarball}"
-                            WORKING_DIRECTORY "${BESPOKE_LLVM_INSTALL_DIR}"
-                            RESULT_VARIABLE _extract_result)
+            # Use the system tar when available; cmake -E tar handles .tar.xz too.
+            find_program(_tar_cmd tar)
+            if(_tar_cmd)
+                execute_process(COMMAND "${_tar_cmd}" -xf "${_llvm_tarball}" -C "${BESPOKE_LLVM_INSTALL_DIR}"
+                                RESULT_VARIABLE _extract_result)
+            else()
+                execute_process(COMMAND "${CMAKE_COMMAND}" -E tar xJf "${_llvm_tarball}"
+                                WORKING_DIRECTORY "${BESPOKE_LLVM_INSTALL_DIR}"
+                                RESULT_VARIABLE _extract_result)
+            endif()
         endif()
         if(NOT _extract_result EQUAL 0)
             message(FATAL_ERROR "Failed to extract LLVM ${BESPOKE_LLVM_VERSION} from ${_llvm_tarball}")
