@@ -59,8 +59,12 @@ endif()
 # no LLVM and keeps the default static runtime. WIN32 isn't defined until
 # project(), but CMAKE_MSVC_RUNTIME_LIBRARY is only honored by the MSVC
 # generator, so gating on the backend alone is safe on Unix.
+# Note: use the plain "MultiThreadedDLL", not the
+# "MultiThreadedDLL$<$<CONFIG:Debug>:Debug>" generator expression. CMake 4.x
+# evaluates the value literally during the compiler-ABI try_compile (before a
+# configuration exists), turning the genex into the unknown "MultiThreadedDLLDebug".
 if(NOT BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL$<$<CONFIG:Debug>:Debug>")
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
 endif()
 
 project(BespokeSynth VERSION 1.3.0 LANGUAGES C CXX ASM)
