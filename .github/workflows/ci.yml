@@ -56,8 +56,6 @@ jobs:
             ninja-build \
             xcb \
             libgtk-3-dev \
-            libwebkit2gtk-4.0 \
-            libwebkit2gtk-4.0-dev \
             libcurl4-openssl-dev \
             alsa \
             alsa-tools \
