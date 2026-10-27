@@ -52,6 +52,15 @@ if(NOT BESPOKE_FAUST_BACKEND STREQUAL "interpreter" AND
     message(FATAL_ERROR "BESPOKE_FAUST_BACKEND must be 'interpreter', 'llvm', 'llvm_system', or 'llvm_download', got '${BESPOKE_FAUST_BACKEND}'")
 endif()
 
+# The downloaded LLVM Windows packages (faust-llvm-*-windows-x64.zip) ship
+# static .lib archives compiled with the dynamic MSVC runtime (/MD), so
+# BespokeSynth must use the same runtime when linking them, or the linker
+# fails with LNK2038 runtime-library mismatches. The interpreter backend has
+# no LLVM and keeps the default static runtime.
+if(WIN32 AND NOT BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL$<$<CONFIG:Debug>:Debug>")
+endif()
+
 message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 math(EXPR BESPOKE_BITNESS "${CMAKE_SIZEOF_VOID_P} * 8" OUTPUT_FORMAT DECIMAL)
 message(STATUS "Targeting ${BESPOKE_BITNESS} bit configuration")
