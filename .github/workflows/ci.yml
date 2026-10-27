@@ -28,11 +28,11 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          # - ubuntu-22.04
+          - ubuntu-22.04
           # - macos-14
           - windows-latest
         backend:
-          - interpreter
+          # - interpreter
           - llvm_download
 
     steps:
