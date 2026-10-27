@@ -838,7 +838,12 @@ if(BESPOKE_USE_SYSTEM_FAUST)
     endif()
 else()
     if(BESPOKE_FAUST_BACKEND STREQUAL "interpreter")
-        target_link_libraries(BespokeSynth PRIVATE staticlib z curses tinfo)
+        # The bundled Faust interpreter staticlib carries its own dependencies
+        # (via FAUST_LIBS), so no extra system libs are needed. The `z curses
+        # tinfo` that used to be here were added for the old LLVM build and
+        # leaked into this branch; they are unnecessary here (and `tinfo` is
+        # not shipped on macOS).
+        target_link_libraries(BespokeSynth PRIVATE staticlib)
     elseif(BESPOKE_FAUST_BACKEND STREQUAL "llvm" OR
            BESPOKE_FAUST_BACKEND STREQUAL "llvm_system" OR
            BESPOKE_FAUST_BACKEND STREQUAL "llvm_download")
@@ -856,14 +861,9 @@ else()
         target_link_directories(BespokeSynth PRIVATE "${LLVM_LIB_DIR}")
         target_link_libraries(BespokeSynth PRIVATE staticlib ${LLVM_LIBS})
         if(NOT WIN32 AND BESPOKE_LLVM_DOWNLOADED)
-            if(BESPOKE_SYSTEM_ZSTD)
-                # System zstd: link the imported target directly.
-                target_link_libraries(BespokeSynth PRIVATE zstd::libzstd_static)
-            endif()
-            # The bundled zstd archive is linked *inside* the LLVM --start-group
-            # from libs/CMakeLists.txt (see the bundled-zstd block there), so it
-            # is scanned within the group and resolves libLLVMSupport.a
-            # (Compression.cpp)'s ZSTD_* references regardless of CMake ordering.
+            # LLVM's static archives reference these system libraries on Unix
+            # (the faust-compiled LLVM bundles its other deps, so no separate
+            # zstd/xml2 are needed).
             target_link_libraries(BespokeSynth PRIVATE z pthread dl m)
         endif()
     else()
