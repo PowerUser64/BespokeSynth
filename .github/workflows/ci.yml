@@ -100,6 +100,11 @@ jobs:
       - name: Install clang-format
         run: |
           sudo apt-get update
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo gpg --dearmor -o /usr/share/keyrings/llvm-snapshot.gpg.key
+          echo "deb [signed-by=/usr/share/keyrings/llvm-snapshot.gpg.key] http://apt.llvm.org/jammy/ llvm-toolchain-jammy-22 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-toolchain-jammy.list
+          sudo apt-get update
           sudo apt-get install -y clang-format-22
           sudo mv /usr/bin/clang-format-22 /usr/bin/clang-format
 
