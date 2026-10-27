@@ -23,20 +23,22 @@ jobs:
   build:
     name: Build (${{ matrix.os }}, ${{ matrix.backend }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 120
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-22.04
-          - macos-14
+          - ubuntu-26.04
+          - ubuntu-26.04-arm
+          - macos-latest
+          - macos-26-intel
           - windows-latest
         backend:
           - interpreter
           - llvm_download
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -88,14 +90,14 @@ jobs:
 
       - name: Build BespokeSynth
         run: |
-          cmake --build build --config Release --target BespokeSynth --parallel 4
+          cmake --build build --config Release --target BespokeSynth --parallel
 
   format:
     name: Code formatting
-    runs-on: ubuntu-22.04
-    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install clang-format
         run: |
