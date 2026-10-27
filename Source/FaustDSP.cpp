@@ -71,7 +71,7 @@ void FaustDSP::Process(double time, FaustChannelArray& mInChannels, FaustChannel
       return;
 
    // TODO: sample-accurate sliders and checkboxes - ComputeSliders(i)
-   mDsp.GetDsp()->compute(gBufferSize, mInChannels.begin(), mOutChannels.begin());
+   mDsp.GetDsp()->compute(gBufferSize, mInChannels.data(), mOutChannels.data());
 }
 
 

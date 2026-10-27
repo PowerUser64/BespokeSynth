@@ -88,13 +88,13 @@ public:
    std::string GetDspString() { return mDspString; }
    FaustIR GetDspIr()
    {
-      return {
-         .mIrIsInitialized = true,
-         .mIsLlvmOptimized = BESPOKE_FAUST_USE_LLVM,
-         .mLlvmTarget = mDsp.GetLlvmTarget(),
-         .mDspString = mDspString,
-         .mIr = mDsp.GetDspIr(),
-      };
+      FaustIR ir;
+      ir.mIrIsInitialized = true;
+      ir.mIsLlvmOptimized = BESPOKE_FAUST_USE_LLVM;
+      ir.mLlvmTarget = mDsp.GetLlvmTarget();
+      ir.mDspString = mDspString;
+      ir.mIr = mDsp.GetDspIr();
+      return ir;
    }
    std::string GetErrorString() { return mFaustErrorString; }
    bool HasError();
