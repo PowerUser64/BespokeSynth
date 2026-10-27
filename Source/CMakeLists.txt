@@ -866,6 +866,9 @@ else()
             # them with a leading underscore (_read/_close/_write); oldnames.lib
             # provides the underscore-less aliases the LLVM objects expect.
             target_link_libraries(BespokeSynth PRIVATE oldnames)
+            # LLVMSupport uses RtlGetLastNtStatus (from ntdll.dll) to map
+            # Windows error codes; its import library is ntdll.lib.
+            target_link_libraries(BespokeSynth PRIVATE ntdll)
         endif()
         if(NOT WIN32 AND BESPOKE_LLVM_DOWNLOADED)
             # LLVM's static archives reference these system libraries on Unix
