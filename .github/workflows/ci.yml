@@ -28,7 +28,8 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-22.04
+          - ubuntu-26.04
+          - ubuntu-26.04-arm
           - macos-14
           - windows-latest
         backend:
@@ -36,7 +37,7 @@ jobs:
           - llvm_download
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -55,8 +56,6 @@ jobs:
             ninja-build \
             xcb \
             libgtk-3-dev \
-            libwebkit2gtk-4.0 \
-            libwebkit2gtk-4.0-dev \
             libcurl4-openssl-dev \
             alsa \
             alsa-tools \
@@ -88,14 +87,14 @@ jobs:
 
       - name: Build BespokeSynth
         run: |
-          cmake --build build --config Release --target BespokeSynth --parallel 4
+          cmake --build build --config Release --target BespokeSynth --parallel
 
   format:
     name: Code formatting
-    runs-on: ubuntu-22.04
-    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install clang-format
         run: |
