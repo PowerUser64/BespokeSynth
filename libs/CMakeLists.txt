@@ -70,6 +70,15 @@ if (NOT BESPOKE_USE_SYSTEM_FAUST)
     include(${CMAKE_SOURCE_DIR}/Source/cmake/obtain-llvm.cmake)
     bespoke_obtain_llvm("${_llvm_mode}")
     include(${CMAKE_SOURCE_DIR}/Source/cmake/llvm-backends.cmake)
+    if(WIN32)
+        # The base generator/instructions_compiler.cpp emits interpreter_dsp
+        # references under MSVC (a faust MSVC-specific instantiation), but the
+        # plain LLVM-backend build omits generator/interpreter/*.cpp, leaving
+        # those symbols undefined at link time. Compile the interpreter backend
+        # into the staticlib on Windows so they resolve; BespokeSynth never
+        # invokes it at runtime in an LLVM build.
+        set(INTERP_BACKEND STATIC CACHE STRING "Include Interpreter backend" FORCE)
+    endif()
     set(INCLUDE_LLVM      ON  CACHE BOOL   "" FORCE)
     # Downloaded LLVM is linked as static archives; a system install may be
     # static or shared (llvm-config picks whichever it ships).
